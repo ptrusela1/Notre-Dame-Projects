@@ -1,0 +1,637 @@
+---
+title: "Predicting Rushing and Receiving Yards for NFL Players"
+author: "paul trusela"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#install.packages(c("nflfastR", "dplyr", "tidyr", "caret"))
+#install.packages("gsisdecoder")
+# install.packages("tidyr")
+# install.packages("cluster")
+# install.packages("factoextra")
+# install.packages("sparcl")
+# install.packages("teamcolors")
+# install.packages("ggimage")
+# install.packages("ggdark")
+# install.packages("ggplot2")
+# install.packages("gridExtra")
+# install.packages("gt")
+library(gt)
+library(ggplot2)
+library(gridExtra)
+library(tidyr) 
+library(cluster) 
+library(factoextra) 
+library(sparcl) 
+library(teamcolors) 
+library(ggimage)
+library(nflfastR)
+library(dplyr)
+library(caret)
+library(gsisdecoder)
+library(tidyverse)
+library(randomForest)
+
+
+```
+
+```{r}
+
+pbp_data <- load_pbp(2023:2024)
+
+```
+
+CLEANING DATA
+```{r}
+player_data <- pbp_data %>%
+  filter(play_type %in% c("run", "pass")) %>%
+  mutate(
+    player_name = case_when(
+      play_type == "run" ~ rusher_player_name,
+      play_type == "pass" ~ receiver_player_name,
+      TRUE ~ NA_character_
+    ),
+    yards_gained = case_when(
+      play_type == "run" ~ rushing_yards,
+      play_type == "pass" ~ receiving_yards,
+      TRUE ~ NA_real_
+    ),
+    opponent = defteam
+  ) %>%
+  filter(!is.na(player_name))
+
+player_averages <- player_data %>%
+  group_by(player_name) %>%
+  summarise(
+    avg_rushing_yards_per_game = sum(rushing_yards, na.rm = TRUE) / n_distinct(game_id),
+    avg_receiving_yards_per_game = sum(receiving_yards, na.rm = TRUE) / n_distinct(game_id)
+  )
+
+player_data <- player_data %>%
+  left_join(player_averages, by = "player_name") %>%
+  group_by(player_name, week, opponent) %>%
+  summarise(
+    total_rushing_yards = sum(rushing_yards, na.rm = TRUE),
+    total_receiving_yards = sum(receiving_yards, na.rm = TRUE),
+    avg_rushing_yards_per_game = first(avg_rushing_yards_per_game),
+    avg_receiving_yards_per_game = first(avg_receiving_yards_per_game)
+  ) %>%
+  ungroup()
+
+player_data <- na.omit(player_data)
+
+```
+
+
+```{r}
+set.seed(42)
+train_index_rush <- createDataPartition(player_data$total_rushing_yards, p = 0.8, list = FALSE)
+train_data_rush <- player_data[train_index_rush, ]
+test_data_rush <- player_data[-train_index_rush, ]
+
+set.seed(42)
+train_index_rec <- createDataPartition(player_data$total_receiving_yards, p = 0.8, list = FALSE)
+train_data_rec <- player_data[train_index_rec, ]
+test_data_rec <- player_data[-train_index_rec, ]
+```
+
+RANDOM FORREST MODEL
+```{r}
+
+rf_model_rush <- train(
+  total_rushing_yards ~ avg_rushing_yards_per_game + opponent,
+  data = train_data_rush,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5)
+)
+
+rf_model_rec <- train(
+  total_receiving_yards ~ avg_receiving_yards_per_game + opponent,
+  data = train_data_rec,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5)
+)
+
+
+```
+
+```{r}
+
+rf_predictions_rush <- predict(rf_model_rush, test_data_rush)
+
+rf_mae_rush <- mean(abs(rf_predictions_rush - test_data_rush$total_rushing_yards))
+print(paste("Mean Absolute Error for Rushing Yards:", rf_mae_rush))
+
+rf_predictions_rec <- predict(rf_model_rec, test_data_rec)
+
+rf_mae_rec <- mean(abs(rf_predictions_rec - test_data_rec$total_receiving_yards))
+print(paste("Mean Absolute Error for Receiving Yards:", rf_mae_rec))
+
+```
+
+```{r}
+library(caret)
+
+rushing_threshold <- 50
+receiving_threshold <- 50
+
+rf_binary_predictions_rush <- ifelse(rf_predictions_rush > rushing_threshold, 1, 0)
+rf_binary_actual_rush <- ifelse(test_data_rush$total_rushing_yards > rushing_threshold, 1, 0)
+
+rf_binary_predictions_rec <- ifelse(rf_predictions_rec > receiving_threshold, 1, 0)
+rf_binary_actual_rec <- ifelse(test_data_rec$total_receiving_yards > receiving_threshold, 1, 0)
+
+rf_conf_matrix_rush <- confusionMatrix(as.factor(rf_binary_predictions_rush), as.factor(rf_binary_actual_rush))
+rf_conf_matrix_rec <- confusionMatrix(as.factor(rf_binary_predictions_rec), as.factor(rf_binary_actual_rec))
+
+print(rf_conf_matrix_rush)
+print(rf_conf_matrix_rec)
+
+```
+
+XGBoost MODEL
+```{r}
+
+xg_model_rush <- train(
+  total_rushing_yards ~ avg_rushing_yards_per_game + opponent,
+  data = train_data_rush,
+  method = "xgbTree",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    nrounds = 100,          
+    max_depth = 6,          
+    eta = 0.3,              
+    gamma = 0,              
+    colsample_bytree = 0.8, 
+    min_child_weight = 1,   
+    subsample = 0.8         
+  )
+)
+
+xg_model_rec <- train(
+  total_receiving_yards ~ avg_receiving_yards_per_game + opponent,
+  data = train_data_rec,
+  method = "xgbTree",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    nrounds = 100,          
+    max_depth = 6,          
+    eta = 0.3,              
+    gamma = 0,              
+    colsample_bytree = 0.8, 
+    min_child_weight = 1,   
+    subsample = 0.8         
+  )
+)
+
+```
+
+```{r}
+
+xg_predictions_rush <- predict(xg_model_rush, test_data_rush)
+
+xg_mae_rush <- mean(abs(xg_predictions_rush - test_data_rush$total_rushing_yards))
+print(paste("Mean Absolute Error for Rushing Yards:", xg_mae_rush))
+
+xg_predictions_rec <- predict(rf_model_rec, test_data_rec)
+
+xg_mae_rec <- mean(abs(xg_predictions_rec - test_data_rec$total_receiving_yards))
+print(paste("Mean Absolute Error for Receiving Yards:", xg_mae_rec))
+
+```
+
+```{r}
+
+rushing_threshold <- 50
+receiving_threshold <- 50
+
+xg_binary_predictions_rush <- ifelse(xg_predictions_rush > rushing_threshold, 1, 0)
+xg_binary_actual_rush <- ifelse(test_data_rush$total_rushing_yards > rushing_threshold, 1, 0)
+
+xg_binary_predictions_rec <- ifelse(xg_predictions_rec > receiving_threshold, 1, 0)
+xg_binary_actual_rec <- ifelse(test_data_rec$total_receiving_yards > receiving_threshold, 1, 0)
+
+xg_conf_matrix_rush <- confusionMatrix(as.factor(xg_binary_predictions_rush), as.factor(xg_binary_actual_rush))
+xg_conf_matrix_rec <- confusionMatrix(as.factor(xg_binary_predictions_rec), as.factor(xg_binary_actual_rec))
+
+print(xg_conf_matrix_rush)
+print(xg_conf_matrix_rec)
+
+```
+DECISION TREE MODEL
+```{r}
+dt_model_rush <- train(
+  total_rushing_yards ~ avg_rushing_yards_per_game + opponent,
+  data = train_data_rush,
+  method = "rpart",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    cp = seq(0.01, 0.1, by = 0.01)  
+  )
+)
+
+dt_model_rec <- train(
+  total_receiving_yards ~ avg_receiving_yards_per_game + opponent,
+  data = train_data_rec,
+  method = "rpart",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = expand.grid(
+    cp = seq(0.01, 0.1, by = 0.01)
+  )
+)
+
+```
+
+```{r}
+dt_predictions_rush <- predict(dt_model_rush, test_data_rush)
+
+dt_mae_rush <- mean(abs(dt_predictions_rush - test_data_rush$total_rushing_yards))
+print(paste("Mean Absolute Error for Rushing Yards:", dt_mae_rush))
+
+dt_predictions_rec <- predict(dt_model_rec, test_data_rec)
+
+dt_mae_rec <- mean(abs(dt_predictions_rec - test_data_rec$total_receiving_yards))
+print(paste("Mean Absolute Error for Receiving Yards:", dt_mae_rec))
+```
+
+```{r}
+
+rushing_threshold <- 50
+receiving_threshold <- 50
+
+dt_binary_predictions_rush <- ifelse(dt_predictions_rush > rushing_threshold, 1, 0)
+dt_binary_actual_rush <- ifelse(test_data_rush$total_rushing_yards > rushing_threshold, 1, 0)
+
+dt_binary_predictions_rec <- ifelse(dt_predictions_rec > receiving_threshold, 1, 0)
+dt_binary_actual_rec <- ifelse(test_data_rec$total_receiving_yards > receiving_threshold, 1, 0)
+
+dt_conf_matrix_rush <- confusionMatrix(as.factor(dt_binary_predictions_rush), as.factor(dt_binary_actual_rush))
+dt_conf_matrix_rec <- confusionMatrix(as.factor(dt_binary_predictions_rec), as.factor(dt_binary_actual_rec))
+
+print(dt_conf_matrix_rush)
+print(dt_conf_matrix_rec)
+
+```
+
+
+As shown by the confusing matrices, the Random Forrest model is roughly the same 
+as the XGBoost model for receiving yards, but Random Forrest is slightly better
+for rushing yards, so we will use the RF Model for our predictions. But the 3rd 
+model gives us our highest Accuracy and our Lowest MAE for Rushing and Receiving,
+BUT it groups all the players into classes so we have predictions that are exactly the same for 2
+players that are in the same class. We are going to continue to use the RF model,
+because it gives us a more personalized approach for each player, without sacrificing
+much accuracy.
+
+```{r}
+
+# Create a data frame with new player data
+new_player_data <- data.frame(
+  player_name = c("J.Waddle", "C.Ridley", "D.Metcalf", "A.St. Brown",
+                  "D.Achane", "T.Pollard", "K.Walker", "D.Montgomery"),
+  opponent = c("TEN", "MIA", "DET", "SEA",
+               "TEN", "MIA", "DET", "SEA"),
+  position = c("WR", "WR", "WR", "WR", "RB", "RB", "RB", "RB")
+)
+
+# Filter player averages for the new player data
+player_avg_data <- player_averages %>%
+  filter(player_name %in% new_player_data$player_name)
+
+# Combine new player data with their averages
+new_player_data <- merge(new_player_data, player_avg_data, by = "player_name")
+
+# Predict rushing and receiving yards
+predicted_rushing_yards <- predict(rf_model_rush, new_player_data)
+predicted_receiving_yards <- predict(rf_model_rec, new_player_data)
+
+# Print predicted yards
+print(paste("Predicted Rushing Yards:", predicted_rushing_yards))
+print(paste("Predicted Receiving Yards:", predicted_receiving_yards))
+
+# Add predictions to the data frame
+predictions_df <- new_player_data %>%
+  mutate(
+    predicted_rushing_yards = predicted_rushing_yards,
+    predicted_receiving_yards = predicted_receiving_yards
+  )
+
+vegas_lines <- c(74.5, 50.5, 92.5, 65.5, 75.5, 37.5, 67.5, 71.5)
+
+predictions_df$vegas_lines <- vegas_lines
+
+colnames(predictions_df) <- c("Name", "Opponent", "Position", "Avg. Rushing Yards", "Avg. Receiving Yards", "Predicted Rushing Yards", "Predicted Receiving Yards", "Vegas Lines")
+
+print(predictions_df)
+
+table_visual <- gt(predictions_df) %>%
+  tab_header(
+    title = "Player Predictions",
+    subtitle = "Predicted Rushing and Receiving Yards"
+  ) %>%
+  fmt_number(
+    columns = vars(`Avg. Rushing Yards`, `Avg. Receiving Yards`, `Predicted Rushing Yards`, `Predicted Receiving Yards`, `Vegas Lines`),
+    decimals = 2
+  ) %>%
+  cols_label(
+    Name = "Player Name",
+    Opponent = "Opponent",
+    Position = "Position",
+    `Avg. Rushing Yards` = "Avg. Rushing Yards",
+    `Avg. Receiving Yards` = "Avg. Receiving Yards",
+    `Predicted Rushing Yards` = "Predicted Rushing Yards",
+    `Predicted Receiving Yards` = "Predicted Receiving Yards",
+    `Vegas Lines` = "Vegas Lines"
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "lightblue"),
+      cell_text(weight = "bold")
+    ),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_options(
+    table.font.size = 12,
+    table.width = pct(100)
+  )
+
+print(table_visual)
+
+
+```
+
+
+player headshots + logos
+```{r}
+logos <- nflfastR::teams_colors_logos
+
+aggregated_team_averages <- player_data %>% 
+  group_by(opponent) %>% 
+  summarize(
+    rec_yds_per_game = (sum(total_receiving_yards))/21,
+    rush_yds_per_game = (sum(total_rushing_yards))/21
+  )
+
+aggregated_team_averages <- merge(aggregated_team_averages, logos, by.x = "opponent", by.y = "team_abbr")
+
+```
+
+Rushing vs. Receiving Yards Given Up
+```{r}
+# g_1 <- ggplot(aggregated_team_averages, # Set dataset
+#               aes(x = rec_yds_per_game, y = rush_yds_per_game)) + # Set aesthetics
+#   geom_point(alpha = 0.3) +  # Set geom point
+#   geom_image(image = aggregated_team_averages$team_logo_espn, asp = 16/9) + # Add logos
+#   labs(y = "Average Rush Yards Given Up Per Game", # Add labels
+#        x = "Average Receiving Yards Given Up Per Game",
+#        title = "Receiving/Rush Yards Given Up",
+#        subtitle = "NFL '23 + '24 Seasons") +
+#   theme_minimal()+
+#    theme(
+#     panel.background = element_rect(fill = "white"),
+#     plot.background = element_rect(fill = "white")
+#    )
+# 
+# 
+# g_1
+```
+
+```{r}
+#ggsave("yards_given_up.png", plot = g_1, width = 10, height = 8, dpi = 300)
+```
+
+
+```{r}
+
+# nfl_teams <- c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", 
+#                "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LA", "MIA", 
+#                "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS")
+# 
+# player_name <- "D.Henry"
+# 
+# new_player_data <- data.frame(
+#   player_name = rep(player_name, length(nfl_teams)),
+#   opponent = nfl_teams
+# )
+# 
+# player_avg_data <- player_averages %>%
+#   filter(player_name == player_name)
+# 
+# new_player_data <- new_player_data %>%
+#   left_join(player_avg_data, by = "player_name")
+# 
+# predicted_rushing_yards <- predict(rf_model_rush, new_player_data)
+# predicted_receiving_yards <- predict(rf_model_rec, new_player_data)
+# 
+# derrick_henry_predictions <- new_player_data %>%
+#   mutate(
+#     predicted_rushing_yards = predicted_rushing_yards,
+#     predicted_receiving_yards = predicted_receiving_yards
+#   )
+# 
+# print(derrick_henry_predictions)
+
+```
+
+```{r}
+# 
+# derrick_henry <- merge(derrick_henry_predictions, logos, by.x = "opponent", by.y = "team_abbr")
+# 
+# dh_plot <- ggplot(derrick_henry, aes(x = predicted_receiving_yards, y = predicted_rushing_yards)) +
+#   geom_image(aes(image = team_logo_espn), size = 0.1) +
+#   labs(
+#     title = "Predicted Receiving vs. Rushing Yards for Derrick Henry",
+#     x = "Predicted Receiving Yards",
+#     y = "Predicted Rushing Yards"
+#   ) +
+#   theme_minimal()+
+#   theme(
+#     panel.background = element_rect(fill = "white"),
+#     plot.background = element_rect(fill = "white")
+#   )
+# print(dh_plot)
+```
+
+```{r}
+#ggsave("derrick_henry.png", plot = dh_plot, width = 10, height = 8, dpi = 300)
+```
+
+
+```{r}
+
+# player_name <- "S.Barkley"
+# 
+# new_player_data <- data.frame(
+#   player_name = rep(player_name, length(nfl_teams)),
+#   opponent = nfl_teams
+# )
+# 
+# player_avg_data <- player_averages %>%
+#   filter(player_name == player_name)
+# 
+# new_player_data <- new_player_data %>%
+#   left_join(player_avg_data, by = "player_name")
+# 
+# predicted_rushing_yards <- predict(rf_model_rush, new_player_data)
+# predicted_receiving_yards <- predict(rf_model_rec, new_player_data)
+# 
+# saquon_predictions <- new_player_data %>%
+#   mutate(
+#     predicted_rushing_yards = predicted_rushing_yards,
+#     predicted_receiving_yards = predicted_receiving_yards
+#   )
+# 
+# print(saquon_predictions)
+
+```
+```{r}
+# saquon_barkley <- merge(saquon_predictions, logos, by.x = "opponent", by.y = "team_abbr")
+# 
+# sb_plot <- ggplot(saquon_barkley, aes(x = predicted_receiving_yards, y = predicted_rushing_yards)) +
+#   geom_image(aes(image = team_logo_espn), size = 0.10) +
+#   labs(
+#     title = "Predicted Receiving vs. Rushing Yards for Saquon Barkley",
+#     x = "Predicted Receiving Yards",
+#     y = "Predicted Rushing Yards"
+#   ) +
+#   theme_minimal()+
+#     theme(
+#     panel.background = element_rect(fill = "white"),
+#     plot.background = element_rect(fill = "white")
+#   )
+# print(sb_plot)
+```
+
+```{r}
+#ggsave("saquon_barkley.png", plot = sb_plot, width = 10, height = 8, dpi = 300)
+```
+
+
+```{r}
+
+# player_name <- "J.Jefferson"
+# 
+# new_player_data <- data.frame(
+#   player_name = rep(player_name, length(nfl_teams)),
+#   opponent = nfl_teams
+# )
+# 
+# player_avg_data <- player_averages %>%
+#   filter(player_name == player_name)
+# 
+# new_player_data <- new_player_data %>%
+#   left_join(player_avg_data, by = "player_name")
+# 
+# predicted_rushing_yards <- predict(rf_model_rush, new_player_data)
+# predicted_receiving_yards <- predict(rf_model_rec, new_player_data)
+# 
+# jettas_predictions <- new_player_data %>%
+#   mutate(
+#     predicted_rushing_yards = predicted_rushing_yards,
+#     predicted_receiving_yards = predicted_receiving_yards
+#   )
+# 
+# print(jettas_predictions)
+
+```
+```{r}
+# justin_jefferson <- merge(jettas_predictions, logos, by.x = "opponent", by.y = "team_abbr")
+# 
+# jj_plot <- ggplot(justin_jefferson, aes(x = predicted_receiving_yards, y = predicted_rushing_yards)) +
+#   geom_image(aes(image = team_logo_espn), size = 0.1) +
+#   labs(
+#     title = "Predicted Receiving vs. Rushing Yards for Justin Jefferson",
+#     x = "Predicted Receiving Yards",
+#     y = "Predicted Rushing Yards"
+#   ) +
+#   theme_minimal()+
+#     theme(
+#     panel.background = element_rect(fill = "white"),
+#     plot.background = element_rect(fill = "white")
+#   )
+# print(jj_plot)
+```
+
+```{r}
+#ggsave("justin_jefferson.png", plot = jj_plot, width = 10, height = 8, dpi = 300)
+```
+
+
+```{r}
+
+# player_name <- "J.Chase"
+# 
+# new_player_data <- data.frame(
+#   player_name = rep(player_name, length(nfl_teams)),
+#   opponent = nfl_teams
+# )
+# 
+# player_avg_data <- player_averages %>%
+#   filter(player_name == player_name)
+# 
+# new_player_data <- new_player_data %>%
+#   left_join(player_avg_data, by = "player_name")
+# 
+# predicted_rushing_yards <- predict(rf_model_rush, new_player_data)
+# predicted_receiving_yards <- predict(rf_model_rec, new_player_data)
+# 
+# jamaar_chase_predictions <- new_player_data %>%
+#   mutate(
+#     predicted_rushing_yards = predicted_rushing_yards,
+#     predicted_receiving_yards = predicted_receiving_yards
+#   )
+# 
+# print(jamaar_chase_predictions)
+
+```
+
+```{r}
+# jamaar_chase <- merge(jamaar_chase_predictions, logos, by.x = "opponent", by.y = "team_abbr")
+# 
+# jc_plot <- ggplot(jamaar_chase, aes(x = predicted_receiving_yards, y = predicted_rushing_yards)) +
+#   geom_image(aes(image = team_logo_espn), size = 0.1) +
+#   labs(
+#     title = "Predicted Receiving vs. Rushing Yards for Ja'Marr Chase",
+#     x = "Predicted Receiving Yards",
+#     y = "Predicted Rushing Yards"
+#   ) +
+#   theme_minimal()+
+#     theme(
+#     panel.background = element_rect(fill = "white"),
+#     plot.background = element_rect(fill = "white")
+#   )
+# print(jc_plot)
+```
+
+```{r}
+#ggsave("jamaar_chase.png", plot = jc_plot, width = 10, height = 8, dpi = 300)
+```
+
+
+SINGLE PLAYER PREDICTION
+```{r}
+# Input data for one player and the opponent he is facing
+single_player_data <- data.frame(
+  player_name = "J.Dobbins"  ,
+  opponent = "JAX"
+)
+
+# Filter player averages for the single player data
+player_avg_data <- player_averages %>%
+  filter(player_name == single_player_data$player_name)
+
+# Combine single player data with their averages
+single_player_data <- merge(single_player_data, player_avg_data, by = "player_name")
+
+# Predict rushing and receiving yards
+predicted_rushing_yards <- predict(rf_model_rush, single_player_data)
+predicted_receiving_yards <- predict(rf_model_rec, single_player_data)
+
+# Print predicted yards
+print(paste("Predicted Rushing Yards:", predicted_rushing_yards))
+print(paste("Predicted Receiving Yards:", predicted_receiving_yards))
+
+```
+
