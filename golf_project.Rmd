@@ -1,0 +1,392 @@
+---
+title: "Predicting PGA Earnings for DP World Tour Players"
+author: "paul trusela, anthony fernandez"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(pheatmap)
+library(tidyverse)
+library(dplyr)
+library(rvest)
+library(tidyr)
+library(DT)
+library(webshot2)
+library(htmlwidgets)
+
+pga_data <- read.csv("pga_data.csv")
+
+pga_data <- pga_data %>%
+  select(-c(6:13, 15:20, 22:24, 30:31))
+```
+
+```{r}
+pga_data <- na.omit(pga_data)
+```
+
+
+```{r}
+variables <- pga_data[, c("strokes", "sg_putt", "sg_arg", "sg_app", "sg_ott", "sg_t2g", "sg_total", "pos")]
+
+corr_matrix <- cor(variables, use = "complete.obs")
+
+corr_matrix
+```
+
+```{r}
+corr_melted <- melt(corr_matrix)
+
+ggplot(corr_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2)), color = "black") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Matrix", x = "", y = "")
+
+```
+
+
+```{r}
+split_data <- pga_data %>%
+  group_by(season, tournament.name) %>%
+  group_split()
+
+for(i in seq_along(split_data)) {
+  tournament_identifier <- paste(split_data[[i]]$season[1], gsub("_", "_", split_data[[i]]$tournament.name[1]), sep = "_")
+  
+  assign(tournament_identifier, split_data[[i]])
+}
+```
+
+```{r}
+unique_tournaments <- unique(pga_data[, c("season", "tournament.name")])
+
+print(unique_tournaments)
+
+```
+
+```{r}
+earnings_data <- read.csv("golf_earnings_data.csv")
+
+head(earnings_data)
+```
+```{r}
+head(pga_data)
+```
+```{r}
+colnames(pga_data)
+colnames(earnings_data)
+```
+
+
+```{r}
+merged_data <- pga_data %>%
+  left_join(earnings_data, by = c("player", "tournament.name", "season"))
+
+head(merged_data)
+```
+```{r}
+pga_data <- na.omit(merged_data)
+```
+
+```{r}
+strokes_columns <- c("sg_putt", "sg_arg", "sg_app", "sg_ott")
+selected_data <- pga_data %>%
+  select(all_of(strokes_columns), earnings)
+
+cor_matrix <- cor(selected_data, use = "complete.obs")
+
+print(cor_matrix)
+
+cor_melted <- as.data.frame(as.table(cor_matrix))
+
+ggplot(cor_melted, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = round(Freq, 2)), color = "black") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation of Strokes Gained Metrics with Earnings", x = "", y = "")
+
+```
+
+
+
+```{r}
+uni_vals <- unique(pga_data[, c("tournament.id",  "season"  )])
+
+pga_copy <- pga_data
+
+for(i in 1:nrow(uni_vals)){
+  pga_copy[which(pga_copy$season == uni_vals$season[i] & pga_copy$tournament.id == uni_vals$tournament.id[i]), 13:18] <- scale(pga_copy[which(pga_copy$season == uni_vals$season[i] & pga_copy$tournament.id == uni_vals$tournament.id[i]), 13:18])
+}
+```
+
+```{r}
+library(dplyr)
+library(zoo)
+
+pga_copy$date <- as.Date(pga_copy$date, format = "%m/%d/%Y")  
+
+pga_copy <- pga_copy %>%
+  mutate(date_numeric = as.numeric(pga_copy$date - min(pga_copy$date)))
+
+head(pga_copy)
+```
+```{r}
+calc_metrics <- function(pga, window){
+  res_db <- as.data.frame(matrix(NA, nrow = nrow(pga), ncol = 6))
+  for(i in 1:nrow(pga)){
+    temp <- pga[which(pga$player.id == pga$player.id[i] &
+                        pga$date_numeric < pga$date_numeric[i] &
+                        pga$date_numeric >= (pga$date_numeric[i] - window)),13:18]
+    if(nrow(temp) > 0){
+      res_db[i,]<- colMeans(temp, na.rm = TRUE)
+      
+    }
+  }
+  return(res_db)
+}
+```
+
+```{r}
+stat_30 <- calc_metrics(pga_copy, 30)
+```
+```{r}
+colnames(stat_30) <- c("avg_sg_ott", "avg_sg_app", "avg_sg_arg", "avg_sg_putt", "avg_sg_atg", "avg_sg_total")
+
+pga_copy <- cbind(pga_copy, stat_30)
+
+head(pga_copy)
+
+```
+
+
+```{r}
+library(caret)
+library(randomForest)
+library(xgboost)
+set.seed(123)
+
+train_index <- createDataPartition(pga_data$earnings, p = 0.8, list = FALSE)
+train_data <- pga_copy[train_index, ]
+test_data <- pga_copy[-train_index, ]
+
+head(train_data)
+head(test_data)
+
+```
+
+```{r}
+copy_test_data <- test_data
+copy_train_data <- train_data
+
+copy_test_data <- na.omit(test_data)
+copy_train_data <- na.omit(train_data)
+
+rf_model <- randomForest(earnings ~ avg_sg_putt + avg_sg_arg + avg_sg_app + avg_sg_ott, 
+                         data = copy_train_data, 
+                         ntree = 500)
+
+print(rf_model)
+
+rf_predictions <- predict(rf_model, newdata = copy_test_data)
+
+rf_rmse <- sqrt(mean((rf_predictions - copy_test_data$earnings)^2))
+print(paste("Random Forest RMSE: ", rf_rmse))
+
+```
+
+```{r}
+linear_model <- lm(earnings ~ avg_sg_putt + avg_sg_arg + avg_sg_app + avg_sg_ott , data = copy_train_data)
+
+summary(linear_model)
+
+linear_predictions <- predict(linear_model, newdata = copy_test_data)
+
+linear_rmse <- sqrt(mean((linear_predictions - copy_test_data$earnings)^2))
+print(paste("Linear Regression RMSE: ", linear_rmse))
+
+```
+
+```{r}
+dtrain <- xgb.DMatrix(data = as.matrix(train_data[, c("avg_sg_putt", "avg_sg_arg", "avg_sg_app", "avg_sg_ott")]), 
+                      label = train_data$earnings)
+
+dtest <- xgb.DMatrix(data = as.matrix(test_data[, c("avg_sg_putt", "avg_sg_arg", "avg_sg_app", "avg_sg_ott")]), 
+                     label = test_data$earnings)
+
+xgb_model <- xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror")
+
+xgb_predictions <- predict(xgb_model, newdata = dtest)
+
+xgb_rmse <- sqrt(mean((xgb_predictions - test_data$earnings)^2))
+print(paste("XGBoost RMSE: ", xgb_rmse))
+```
+
+```{r}
+print(paste("Linear Regression RMSE: ", linear_rmse))
+print(paste("Random Forest RMSE: ", rf_rmse))
+print(paste("XGBoost RMSE: ", xgb_rmse))
+
+```
+
+
+```{r}
+importance(rf_model)
+
+xgb.importance(feature_names = colnames(dtrain), model = xgb_model)
+```
+
+```{r}
+sg_ott <- read.csv("sg_ott.csv")
+sg_app <- read.csv("sg_app.csv")
+sg_atg <- read.csv("sg_atg.csv")
+sg_putt <- read.csv("sg_putt.csv")
+
+head(sg_ott)
+head(sg_app)
+head(sg_atg)
+head(sg_putt)
+```
+
+```{r}
+sg_dpwt_data <- sg_ott %>%
+  inner_join(sg_app, by = "Name") %>%
+  inner_join(sg_atg, by = "Name") %>%
+  inner_join(sg_putt, by = "Name")
+
+head(sg_dpwt_data)
+
+```
+```{r}
+sg_dpwt_data <- sg_dpwt_data %>%
+  rename(
+    avg_sg_ott = "Strokes.Gained.Off.the.Tee",
+    avg_sg_app = "Strokes.Gained.Approach",
+    avg_sg_arg = "Strokes.Gained.Around.the.Green",
+    avg_sg_putt = "Strokes.Gained.Putting"
+  )
+```
+
+
+```{r}
+prediction_data <- sg_dpwt_data[, c("avg_sg_putt", "avg_sg_arg", "avg_sg_app", "avg_sg_ott")] 
+
+prediction_matrix <- as.matrix(prediction_data)
+prediction_matrix <- xgb.DMatrix(data = prediction_matrix)
+
+dp_world_predictions <- predict(xgb_model, newdata = prediction_matrix)
+
+sg_dpwt_data$predicted_earnings <- dp_world_predictions
+
+head(sg_dpwt_data)
+
+```
+
+```{r}
+ppl_to_move <- sg_dpwt_data[c(127, 124, 37, 174, 86, 101, 145, 85, 110, 122, 74, 164, 148, 11, 49 ), ]
+```
+
+```{r}
+ppl_move_chart <- datatable(ppl_to_move, 
+          options = list(pageLength = 15), 
+          colnames = c("Player Name", "SG OTT", "SG APP", "SG ARG", "SG PUTT", "Predicted Earnings"),
+          caption = "Golfers' Performance and Predicted Earnings") %>%
+  formatCurrency(columns = "predicted_earnings", currency = "$", digits = 2)
+```
+
+```{r}
+pga_copy2 <- pga_copy[, c("avg_sg_putt", "avg_sg_arg", "avg_sg_app", "avg_sg_ott")] 
+pga_matrix <- as.matrix(pga_copy2)
+pga_matrix <- xgb.DMatrix(data = pga_matrix)
+pga_predictions <- predict(xgb_model, newdata = pga_matrix)
+
+pga_copy$predicted_earnings <- pga_predictions
+```
+
+```{r}
+correlation <- ggplot(cor_melted, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = round(Freq, 2)), color = "black", size = 4) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12, color = "white"),
+        axis.text.y = element_text(size = 12, color = "white"),
+        axis.title = element_text(size = 14, color = "white"),
+        plot.title = element_text(size = 16, hjust = 0.5, color = "white"),
+        panel.background = element_rect(fill = "black"),
+        plot.background = element_rect(fill = "black"),
+        panel.grid = element_blank()) +  
+  labs(title = "Correlation of Strokes Gained Metrics with Earnings", x = "", y = "")
+
+
+print(correlation)
+
+```
+
+```{r}
+rmse_values <- data.frame(
+  Model = c("Linear Regression", "Random Forest", "XGBoost"),
+  RMSE = c(linear_rmse, rf_rmse, xgb_rmse)
+)
+
+rmse_plot <- ggplot(rmse_values, aes(x = Model, y = RMSE, fill = Model)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(RMSE, 2)), vjust = -0.5, size = 5) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 14)) +
+  labs(title = "Model Comparison: RMSE Values", y = "RMSE", x = "") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5))
+
+print(rmse_plot)
+```
+
+```{r}
+importance_matrix <- xgb.importance(model = xgb_model)
+
+print(importance_matrix)
+```
+```{r}
+feat_imp <- ggplot(importance_matrix, aes(x = reorder(Feature, Gain), y = Gain)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "XGBoost Feature Importance", x = "Feature", y = "Gain") +
+  theme_minimal()
+
+
+print(feat_imp)
+```
+
+```{r}
+predic_vs_actual <- ggplot(pga_copy, aes(x = earnings, y = predicted_earnings)) +
+  geom_point(aes(color = earnings), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  theme_minimal() +
+  labs(title = "Predicted vs Actual Earnings", x = "Actual Earnings", y = "Predicted Earnings") +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size = 16, hjust = 0.5))
+
+print(predic_vs_actual)
+
+# ggsave("correlation_heatmap.png", plot = correlation, width = 10, height = 8, dpi = 300)
+# ggsave("rmse_comparison.png", plot = rmse_plot, width = 8, height = 6, dpi = 300)
+# ggsave("feature_importance.png", plot = feat_imp, width = 8, height = 6, dpi = 300)
+# ggsave("predicted_vs_actual.png", plot = predic_vs_actual, width = 10, height = 8, dpi = 300)
+# saveWidget(ppl_move_chart, "ppl_move_chart.html")
+# webshot("ppl_move_chart.html", file = "ppl_move_chart.png")
+```
+
+
+
+
+
