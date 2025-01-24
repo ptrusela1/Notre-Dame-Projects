@@ -1,0 +1,262 @@
+---
+title: "CFB Composite Rankings"
+author: "paul trusela"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+#install.packages("rvest")
+#install.packages("dplyr")
+#install.packages("janitor")
+# install.packages("teamcolors")
+# install.packages("cfbfastR")
+library(ggplot2)
+library(ggimage)
+library(cfbfastR)
+library(teamcolors)
+library(rvest)
+library(dplyr)
+library(janitor)
+
+```
+
+```{r}
+url <- "https://www.espn.com/college-football/fpi/_/view/efficiencies"
+efficiency_rankings <- read_html(url)
+
+efficiency_table <- efficiency_rankings %>% html_nodes("table")
+
+efficiency_table_list <- lapply(efficiency_table, function(table) {
+ efficiency_table %>% html_table(fill = TRUE)
+})
+
+
+efficiency_table <- bind_cols(efficiency_table_list[[1]], efficiency_table_list[[2]])
+
+efficiency_table <- efficiency_table %>%
+  select(-c(11:20))
+
+colnames(efficiency_table) <- c("TEAM", "CONFERENCE", "OVERALL EFF", "OVERALL RNK", "OFFENSE EFF", "OFFENSE RNK", "DEFENSE EFF", "DEFENSE RNK", "SPECIAL TEAMS EFF", "SPECIAL TEAMS RNK")
+
+efficiency_table <- efficiency_table[-1, ]
+
+```
+
+Efficiency Table Visual
+```{r}
+cfb_logos <- cfbfastR::load_cfb_teams()
+
+cfb_logos <- cfb_logos %>% 
+  filter(classification == "fbs") %>% 
+  mutate(school_team = paste(school, mascot, sep = " "))
+
+logos_and_efficiencies <- merge(efficiency_table, cfb_logos, by.x = "TEAM", by.y = "school_team")
+
+```
+
+```{r}
+# g_1 <- ggplot(logos_and_efficiencies, # Set dataset 
+#               aes(x = `OFFENSE EFF`, y = `DEFENSE EFF`)) + # Set aesthetics
+#   geom_point(alpha = 0.3) + # Set geom point
+#   geom_image(image = logos_and_efficiencies$logo, asp = 16/9, size = 0.04) + # Add logos
+#   labs(y = "Defensive Efficiency", # Add labels
+#        x = "Offensive Efficiency",
+#        title = "Offensive + Defensive Efficiencies",
+#        subtitle = "CFB - 2024 Season")+
+#   theme(axis.text.x = element_blank(), # Remove x-axis numbers
+#         axis.text.y = element_blank())
+#   
+# 
+# g_1
+```
+```{r}
+# ggsave("efficiency_graph.png", plot = g_1 )
+# 
+
+```
+
+
+```{r}
+fpi_url <- "https://www.espn.com/college-football/fpi"
+fpi_rankings <- read_html(fpi_url)
+
+fpi_table <- fpi_rankings %>% html_nodes("table")
+
+fpi_table_list <- lapply(fpi_table, function(table) {
+ fpi_table %>% html_table(fill = TRUE)
+})
+
+fpi_table <- bind_cols(fpi_table_list[[1]], fpi_table_list[[2]])
+
+fpi_table <- fpi_table %>%
+  select(-c(15:28))
+
+colnames(fpi_table) <- c("TEAM", "CONFERENCE", "W-L", "FPI", "RK", "TREND", "PROJ W-L", "WIN OUT%", "6WINS%", "WIN DIV%", "WIN CONF%", "PLAYOFF%", "MAKE NC%", "WIN NC%")
+
+fpi_table <- fpi_table[-1, ]
+
+```
+```{r}
+logos_and_fpi <- merge(fpi_table, cfb_logos, by.x = "TEAM", by.y = "school_team")
+```
+
+```{r}
+# 
+# g_2 <- ggplot(logos_and_fpi, # Set dataset 
+#               aes(x = FPI, y = `PLAYOFF%`)) + # Set aesthetics
+#   geom_point(alpha = 0.3) + # Set geom point
+#   geom_image(image = logos_and_fpi$logo, asp = 16/9, size = 0.04) + # Add logos
+#   labs(y = "Percent Chance to make CFP", # Add labels
+#        x = "FPI Rank",
+#        title = "FPI Rank + Chance to make CFP",
+#        subtitle = "CFB - 2024 Season") +
+#    theme(axis.text.x = element_blank(), # Remove x-axis numbers
+#         axis.text.y = element_blank())
+#   
+# 
+# g_2
+
+```
+
+
+```{r}
+sor_url <- "https://www.espn.com/college-football/fpi/_/view/resume"
+sor_rankings <- read_html(sor_url)
+
+sor_table <- sor_rankings %>% html_nodes("table")
+
+sor_table_list <- lapply(sor_table, function(table) {
+ sor_table %>% html_table(fill = TRUE)
+})
+
+sor_table <- bind_cols(sor_table_list[[1]], sor_table_list[[2]])
+
+sor_table <- sor_table %>%
+  select(-c(10:18))
+
+sor_table <- sor_table %>%
+  row_to_names(row_number = 1)
+```
+
+```{r}
+logos_and_sos <- merge(sor_table, cfb_logos, by.x = "Team", by.y = "school_team")
+
+logos_and_sos$sos <- as.numeric(logos_and_sos$SOS)
+logos_and_sos$sor <- as.numeric(logos_and_sos$SOR)
+
+```
+
+
+```{r}
+# 
+# g_3 <- ggplot(logos_and_sos, # Set dataset 
+#               aes(x = SOS, y = SOR)) + # Set aesthetics
+#   geom_point(alpha = 0.3) + # Set geom point
+#   geom_image(image = logos_and_sos$logo, asp = 16/9, size = 0.04) + # Add logos
+#   labs(y = "Strength of Record", # Add labels
+#        x = "Strength of Schedule Rank",
+#        title = "SOS and SOR",
+#        subtitle = "CFB - 2024 Season") +
+#   scale_x_reverse() +
+#   scale_y_reverse()
+# 
+# g_3
+
+# ggsave("sos_sor_graph.png", plot = g_3 )
+```
+
+
+```{r}
+
+colnames(efficiency_table) <- c("TEAM", "CONFERENCE", "OVERALL_EFF", "OVERALL_RNK", "OFFENSE_EFF", "OFFENSE_RNK", "DEFENSE_EFF", "DEFENSE_RNK", "SPECIAL_TEAMS_EFF", "SPECIAL_TEAMS_RNK")
+
+efficiency_table <- efficiency_table %>% clean_names()
+fpi_table <- fpi_table %>% clean_names()
+sor_table <- sor_table %>% clean_names()
+
+efficiency_table <- efficiency_table %>%
+  mutate(across(c(overall_rnk, offense_rnk, defense_rnk, special_teams_rnk), as.numeric)) %>%
+  mutate(OVERALL_RNK_NORM = scale(overall_rnk),
+         OFFENSE_RNK_NORM = scale(offense_rnk),
+         DEFENSE_RNK_NORM = scale(defense_rnk),
+         SPECIAL_TEAMS_RNK_NORM = scale(special_teams_rnk))
+
+sor_table <- sor_table %>%
+  mutate(across(c(sor), as.numeric)) %>%
+  mutate(RK_NORM = scale(sor))
+
+merged_table <- efficiency_table %>%
+  inner_join(fpi_table, by = "team") %>%
+  inner_join(sor_table, by = "team")
+
+merged_table <- merged_table %>%
+  mutate(COMPOSITE_SCORE = rowMeans(select(., OVERALL_RNK_NORM, OFFENSE_RNK_NORM, DEFENSE_RNK_NORM, SPECIAL_TEAMS_RNK_NORM), na.rm = TRUE))
+
+
+ranked_teams <- merged_table %>%
+  arrange(COMPOSITE_SCORE) %>%
+  select(team, COMPOSITE_SCORE)
+
+merged_rank_table <- ranked_teams %>%
+  inner_join(fpi_table, by = "team") 
+
+merged_rank_table <- merged_rank_table %>%
+  select(-c(5,7:15)) %>% 
+  rename(fpi_rank = rk) %>% 
+  mutate(our_rank = rank(COMPOSITE_SCORE, ties.method = "first")) %>% 
+  select(team, conference, our_rank, fpi_rank, w_l, COMPOSITE_SCORE)
+
+merged_rank_table <- merged_rank_table %>%
+  mutate(
+    our_rank = as.numeric(our_rank),
+    fpi_rank = as.numeric(fpi_rank),
+    difference = our_rank - fpi_rank
+  )
+
+
+
+```
+
+```{r}
+logos_and_final_ranks <- merge(merged_rank_table, cfb_logos, by.x = "team", by.y = "school_team")
+
+logos_and_final_ranks$our_rank <- as.numeric(logos_and_final_ranks$our_rank)
+logos_and_final_ranks$fpi_rank <- as.numeric(logos_and_final_ranks$fpi_rank)
+```
+
+```{r}
+# g_4 <- ggplot(logos_and_final_ranks, # Set dataset 
+#               aes(x = our_rank, y = fpi_rank)) + # Set aesthetics
+#   geom_point(alpha = 0.3) + # Set geom point
+#   geom_image(image = logos_and_final_ranks$logo, asp = 16/9, size = 0.04) + # Add logos
+#   labs(y = "FPI Rank", # Add labels
+#        x = "Our Rank",
+#        title = "FPI Rank vs. Our Rank",
+#        subtitle = "CFB - 2024 Season") +
+#   scale_x_reverse() +
+#   scale_y_reverse()
+# 
+# g_4
+
+# ggsave("fpivsour_graph.png", plot = g_4 )
+```
+
+
+```{r}
+# write.csv(fpi_table, file="fpi_table.csv", row.names=FALSE)
+# write.csv(sor_table, file="sor_table.csv", row.names=FALSE)
+# write.csv(efficiency_table, file="efficiency_table.csv", row.names=FALSE)
+# write.csv(merged_table, file="merged_table.csv", row.names=FALSE)
+# write.csv(merged_rank_table, file="ranked_teams.csv", row.names=FALSE)
+```
+
+
+
+
