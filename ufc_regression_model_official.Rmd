@@ -1,0 +1,312 @@
+---
+title: "Predicting UFC Fights"
+date: "07/31/2024"
+author: Paul Trusela
+output: 
+  slidy_presentation: default
+  beamer_presentation: default
+  iosldies_presentation: default
+---
+```{r boring, include=FALSE}
+library(dplyr)
+library(sjPlot)
+library(ggplot2)
+library(predict3d)
+library(corrr)
+library(DALEX)
+library(lme4)
+library(car)
+```
+
+
+```{r Cleaning Data, echo=TRUE}
+
+ufc_fight_data <- read.csv("C:/users/pauly/downloads/fight_data.csv")
+ufc_fighter_data <- read.csv("C:/users/pauly/downloads/official_fighter_data.csv")
+
+
+ufc_fight_data$win <- ifelse(ufc_fight_data$res == "W", 1, 0)
+
+ufc_agg <- ufc_fight_data %>% 
+  group_by(full_name) %>% 
+  summarise(wins = sum(win),
+            fights = n(),
+            AKDL = mean(kd),
+            AKDR = mean(kds_received),
+            TSL = mean(strike_landed),
+            ASRR = mean(sig_reg_percent)
+            )
+
+
+ufc_agg <- left_join(ufc_agg,ufc_fighter_data, by="full_name")
+
+ufc_agg$win_rate <- ufc_agg$wins/ufc_agg$fights
+
+ufc_agg <- na.omit(ufc_agg)
+
+```
+Can we use a select few UFC stats to try to predict win rates, and
+winners of fights?
+
+I scraped my data from ufcstats.com and had all sorts of stats, over 30+, I mutated
+and transformed my data into something I could work with and then started checking the correlation
+of certain variables with others.
+
+```{r Correlation Plot, echo=TRUE, message=FALSE, warning=FALSE}
+
+ufc_correlate <- correlate(ufc_agg)
+
+rplot(ufc_correlate) +
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+
+AKDL - Average Knockdowns Landed per Fight
+
+AKDR - Average Knockdowns Received per Fight
+
+TSL - Total Strikes Landed
+
+ASRR - Average Significant to Regular strike Ratio
+
+SLPM - Significant Strikes Landed per Minute
+
+SAPM - Significant Strikes Absorbed per Minute
+
+STRD - Significant Strike Defense (the % of opponents strikes that did not land)
+
+TD - Average Takedowns Landed per 15 minutes
+
+TDA - Takedown Accuracy (% of TD landed)
+
+TDD - Takedown Defense (the % of opponents TD attempts that did not land)
+
+SUBA - Submission Attempts
+
+
+
+
+After Checking the correlation of the variables, I started playing around with the
+model to try and figure out which stats would be most important to use, I ultimatley
+settled on 9 different stats that cover variopus aspects of a UFC fight.
+
+```{r Model, echo=TRUE, warning=FALSE}
+ufc_model <- lm(win_rate ~ 
+                  AKDL +
+                  AKDR +
+                  SLPM +
+                  SAPM +
+                  STRD +
+                  TDD +
+                  ASRR +
+                  TD +
+                  TSL
+                  ,data = ufc_agg)
+
+summary(ufc_model)
+```
+Overall I was moderately happy with how the model turned out, the P-value is very
+low, and the R-squared is decent, definitely could be better. But I would say there 
+is a moderate correlation among the variables chosen and the model could be used
+to get a baseline idea of who might win a fight, and the model could also even show
+fighters what areas are most important to work on, as seen later in the file.
+All the variables are statistically significant, with AKDR + SAPM being the only negative 
+correlations.
+
+```{r}
+performance::check_collinearity(ufc_model)
+```
+Checking the VIF scores, they all seem to be relatively low, the only one that
+may raise a small amount of concern is the SLPM or Significant Strikes Landed per Minute, 
+but I believe that to be a very important stat to include in our model.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(1001)
+
+train_indices <- sample(1:nrow(ufc_agg), 
+                        0.8 * nrow(ufc_agg), 
+                        replace = FALSE)
+
+train_data <- ufc_agg[train_indices, 
+                c("win_rate",
+                  "AKDL",
+                  "AKDR",
+                  "SLPM", 
+                  "SAPM",
+                  "STRD",
+                  "TDD", 
+                  "ASRR",
+                  "TD",
+                  "TSL")]
+
+train_data <- na.omit(train_data)
+
+test_data <- ufc_agg[-train_indices, 
+                c("win_rate",
+                  "AKDL",
+                  "AKDR",
+                  "SLPM", 
+                  "SAPM",
+                  "STRD",
+                  "TDD", 
+                  "ASRR",
+                  "TD",
+                  "TSL")]
+
+test_data <- na.omit(test_data)
+
+train_ufc_model <- lm(win_rate ~ 
+                  AKDL +
+                  AKDR +
+                  SLPM +
+                  SAPM +
+                  STRD +
+                  TDD +
+                  ASRR +
+                  TD +
+                  TSL
+                  ,data = ufc_agg)
+
+test_data$predicted_win_rate <- predict(train_ufc_model, 
+                                   newdata = test_data)
+
+
+```
+Next I am developing train and test data to use for the prediction portion of the
+model, which will ultimately be used to predict an outcome of a fight between 2 fighters.
+
+```{r echo=TRUE}
+
+train_explain <- explain(
+  train_ufc_model, 
+  data = train_data[, which(names(train_data) != "win_rate")], 
+  y = train_data$win_rate,
+)
+
+```
+
+```{r train performance, echo=TRUE}
+train_performance <- model_performance(train_explain)
+
+train_performance
+```
+Although the R-Squared could definitley be improved, the model overall is still
+statistically significant.
+
+```{r Predicted Test Data, echo=TRUE}
+shap_plot <- predict_parts(
+  train_explain, 
+  new_observation = test_data, 
+  type = "shap")
+
+plot(shap_plot)
+```
+
+The plot above shows how a fighter's win percentage would be effected based on various 
+values for each variable.
+
+
+```{r}
+model_var_imp <- model_parts(train_explain, type = "variable_importance")
+
+plot(model_var_imp)
+```
+We see that the least important variable in the model is the STRD or Significant 
+Strike Defense, which I was surprised at since its pretty important to try to do
+dodge the punches being thrown at you.
+
+
+
+```{r Variable effects on Win Percentage, echo=TRUE, message=FALSE, warning=FALSE}
+model_var_profile <- variable_profile(train_explain, type = "conditional")
+
+plot(model_var_profile, title = " ")
+```
+
+This graph is a good visual to show how drastically a variable effects
+a fighter's win percentage. with Average Knockdowns Landed (AKDL), 
+being most drastic.
+
+```{r Break Down of Model, echo=TRUE}
+break_down_plot <- predict_parts(
+  train_explain, 
+  new_observation = test_data, 
+  type = "break_down")
+
+plot(break_down_plot, title = "Break Down Profile of Model")
+```
+
+```{r Jon Jones vs Stipe Miocic, echo=TRUE, message=FALSE, warning=FALSE}
+jon_jones <- tibble(
+                  AKDL = 0.23,
+                  AKDR = 0,
+                  SLPM = 4.29,
+                  SAPM = 2.22,
+                  STRD = 0.64,
+                  TDD = 0.95,
+                  ASRR = 0.62,
+                  TD = 1.93,
+                  TSL = 83.41
+)
+
+predict(
+    train_ufc_model,
+    newdata = jon_jones
+)
+
+stipe_miocic <- tibble(
+                  AKDL = 0.39,
+                  AKDR = 0.28,
+                  SLPM = 4.82,
+                  SAPM = 3.82,
+                  STRD = 0.54,
+                  TDD = 1,
+                  ASRR = 0.59 ,
+                  TD = 1.86,
+                  TSL = 85.39
+)
+
+predict(
+    train_ufc_model,
+    newdata = stipe_miocic
+)
+```
+
+Now I am testing the projected win rate for 2 fighters based on their stats
+inputed into the model. According to the model Jon Jones has a slightly higher
+expected win rate, but this does not take into account the opponent that each would
+be fighting.
+
+```{r Jon Jones Break Down, echo=TRUE}
+break_down_plot_jon_jones <- predict_parts(
+  train_explain, 
+  new_observation = jon_jones, 
+  type = "break_down")
+
+plot(break_down_plot_jon_jones, title = "Break Down Profile for Jon Jones")
+```
+
+Above is a breakdown of Jon Jones stats and hiow they affect his projected win rate.
+
+```{r Stipe Miocic Break Down, echo=TRUE}
+break_down_plot_stipe_miocic <- predict_parts(
+  train_explain, 
+  new_observation = stipe_miocic, 
+  type = "break_down")
+
+plot(break_down_plot_stipe_miocic, title = "Break Down Profile for Stipe Miocic")
+```
+
+Above is a visual for Stipe Miocic's stats, and how they affect his win rate.
+The red being what negatively affects him, strikes absorbed per minute and knockdowns
+received, could provide insights into areas a fighter may need to improve.
+
+Overall I am happy with how the model turned out. I don't necessarily trust it as
+a predictor to bet money with, but I think the visuals that came out of it can be
+super helpful for coaches and for fans to see. I think I could improve the model by
+somehow integrating fighters age, and/or the level of opponents they have face, 
+since those would likely have a large impact on the prediction side of the model.
+Another improvement could include developing a way to compare 2 fighters directly 
+to each other as a better way of predicting a fight based on how their stats 
+match-up.
