@@ -1,0 +1,705 @@
+---
+title: "NFL Data"
+author: "Anthony Fernandez"
+date: "2024-11-18"
+output: html_document
+---
+
+```{r}
+options(repos = c(CRAN = "https://cran.r-project.org"))
+
+# Install required packages if not already installed
+install.packages("nflfastR")
+install.packages("dplyr")
+install.packages("purrr")
+
+# Load the packages
+library(nflfastR)
+library(dplyr)
+library(purrr)
+library(randomForest)
+
+
+```
+
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+training_data <- map_dfr(seasons, ~ load_pbp(.x))
+
+# Load play-by-play data for 2023
+testing_data <- load_pbp(2023)
+
+```
+
+```{r}
+# Example of preparing training data with selected features
+training_data <- training_data %>%
+  dplyr::select(game_id, posteam, defteam, season, play_type, yards_gained, epa, pass, rush, complete_pass, interception, sack)
+
+# Example of preparing testing data with selected features
+testing_data <- testing_data %>%
+  dplyr::select(game_id, posteam, defteam, season, play_type, yards_gained, epa, pass, rush, complete_pass, interception, sack)
+
+```
+
+```{r}
+# Filter and select relevant features for offense
+offensive_data <- training_data %>%
+  filter(pass == 1 | rush == 1) %>%
+  select(posteam, yards_gained, epa, complete_pass, interception, sack)
+
+# Filter and select relevant features for defense
+defensive_data <- training_data %>%
+  filter(defteam != posteam) %>%
+  select(defteam, yards_gained, epa, complete_pass, interception, sack)
+
+```
+
+```{r}
+# Impute missing values with median
+offensive_data_clean <- offensive_data %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), median(., na.rm = TRUE), .)))
+
+defensive_data_clean <- defensive_data %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), median(., na.rm = TRUE), .)))
+
+```
+
+DEFENSIVE STATS
+```{r}
+# Create a random forest model for defense
+set.seed(123) # for reproducibility
+
+defensive_model <- randomForest(yards_gained ~ ., data = defensive_data_clean, importance = TRUE)
+
+# Display the importance of each feature
+importance(defensive_model)
+varImpPlot(defensive_model)
+
+```
+```{r}
+
+# Load required packages
+library(nflfastR)
+library(dplyr)
+library(purrr)
+
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+# Calculate NFL averages
+nfl_averages <- data %>%
+  filter(!is.na(epa)) %>%
+  summarise(
+    avg_sacks = mean(sack, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Calculate Chargers' performance
+chargers_performance <- data %>%
+  filter(defteam == "LAC" & !is.na(epa)) %>%
+  summarise(
+    avg_sacks = mean(sack, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Create a comparison table
+comparison <- data.frame(
+  Stat = c("Sacks", "EPA", "Completion Percentage Allowed", "Interceptions"),
+  NFL_Average = c(nfl_averages$avg_sacks, nfl_averages$avg_epa, nfl_averages$avg_completion_pct, nfl_averages$avg_interceptions),
+  Chargers = c(chargers_performance$avg_sacks, chargers_performance$avg_epa, chargers_performance$avg_completion_pct, chargers_performance$avg_interceptions)
+)
+
+print(comparison)
+
+```
+NFL v CHARGERS DEF STATS
+
+```{r}
+# Export the comparison dataframe to a CSV file
+write.csv(comparison, "chargers_vs_nfl_comparison.csv", row.names = FALSE)
+
+```
+
+PLAYOFF TEAMS VS THE CHARGERS DEF STATS
+
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+playoff_teams <- list(
+  "2018" = c("KC", "NE", "HOU", "BAL", "LAC", "IND", "NO", "LAR", "CHI", "DAL", "SEA", "PHI"),
+  "2019" = c("KC", "SF", "BAL", "GB", "BUF", "TEN", "HOU", "MIN", "NO", "PHI", "SEA"),
+  "2020" = c("KC", "TB", "BUF", "GB", "BAL", "CLE", "NO", "LAR", "TEN", "IND", "SEA"),
+  "2021" = c("KC", "CIN", "BUF", "TEN", "LV", "NE", "PIT", "LAR", "GB", "TB", "DAL", "ARI"),
+  "2022" = c("KC", "PHI", "BUF", "CIN", "SF", "DAL", "NYG", "SEA", "JAX", "MIN", "LAC", "MIA")
+)
+
+# Convert playoff teams list to a data frame
+playoff_teams_df <- data.frame(
+  season = rep(names(playoff_teams), lengths(playoff_teams)),
+  team = unlist(playoff_teams)
+)
+
+# Filter play-by-play data for playoff teams
+playoff_data <- data %>%
+  filter(season %in% playoff_teams_df$season & (posteam %in% playoff_teams_df$team | defteam %in% playoff_teams_df$team))
+
+```
+
+```{r}
+# Calculate playoff teams' defensive stats averages
+playoff_defense_averages <- playoff_data %>%
+  filter(!is.na(epa) & defteam %in% playoff_teams_df$team) %>%
+  summarise(
+    avg_sacks = mean(sack, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Calculate Chargers' defensive performance
+chargers_performance <- data %>%
+  filter(defteam == "LAC" & !is.na(epa)) %>%
+  summarise(
+    avg_sacks = mean(sack, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+
+```{r}
+# Create a comparison table
+comparison <- data.frame(
+  Stat = c("Sacks", "EPA", "Completion Percentage Allowed", "Interceptions"),
+  Playoff_Team_Average = c(playoff_defense_averages$avg_sacks, playoff_defense_averages$avg_epa, playoff_defense_averages$avg_completion_pct, playoff_defense_averages$avg_interceptions),
+  Chargers = c(chargers_performance$avg_sacks, chargers_performance$avg_epa, chargers_performance$avg_completion_pct, chargers_performance$avg_interceptions)
+)
+
+print(comparison)
+
+```
+
+```{r}
+# Export the comparison dataframe to a CSV file
+write.csv(comparison, "chargers_vs_playoff_teams_comparison.csv", row.names = FALSE)
+
+```
+
+
+
+
+
+
+
+OFFENSIVE STATS V CHARGERS
+
+
+```{r}
+# Create a random forest model for offense
+set.seed(123) # for reproducibility
+
+offensive_model <- randomForest(yards_gained ~ ., data = offensive_data_clean, importance = TRUE)
+
+# Display the importance of each feature
+importance(offensive_model)
+varImpPlot(offensive_model)
+
+```
+
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+```
+
+```{r}
+# Filter for offensive plays and calculate NFL averages
+nfl_offensive_averages <- data %>%
+  filter(pass == 1 | rush == 1) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+print(nfl_offensive_averages)
+
+```
+
+```{r}
+# Filter for Chargers' offensive plays and calculate their performance
+chargers_offensive_performance <- data %>%
+  filter(posteam == "LAC" & (pass == 1 | rush == 1)) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+print(chargers_offensive_performance)
+
+```
+
+```{r}
+# Create a comparison table for offensive stats
+offensive_comparison <- data.frame(
+  Stat = c("Yards Gained", "EPA", "Completion Percentage", "Interceptions"),
+  NFL_Average = c(nfl_offensive_averages$avg_yards_gained, nfl_offensive_averages$avg_epa, nfl_offensive_averages$avg_completion_pct, nfl_offensive_averages$avg_interceptions),
+  Chargers = c(chargers_offensive_performance$avg_yards_gained, chargers_offensive_performance$avg_epa, chargers_offensive_performance$avg_completion_pct, chargers_offensive_performance$avg_interceptions)
+)
+
+print(offensive_comparison)
+
+```
+
+```{r}
+# Export the offensive comparison dataframe to a CSV file
+write.csv(offensive_comparison, "chargers_vs_nfl_offensive_comparison.csv", row.names = FALSE)
+
+```
+
+PLAYOFF TEAMS VS CHARGERS OFFENSIVE STATS
+
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+```
+
+
+```{r}
+playoff_teams <- list(
+  "2018" = c("KC", "NE", "HOU", "BAL", "LAC", "IND", "NO", "LAR", "CHI", "DAL", "SEA", "PHI"),
+  "2019" = c("KC", "SF", "BAL", "GB", "BUF", "TEN", "HOU", "MIN", "NO", "PHI", "SEA"),
+  "2020" = c("KC", "TB", "BUF", "GB", "BAL", "CLE", "NO", "LAR", "TEN", "IND", "SEA"),
+  "2021" = c("KC", "CIN", "BUF", "TEN", "LV", "NE", "PIT", "LAR", "GB", "TB", "DAL", "ARI"),
+  "2022" = c("KC", "PHI", "BUF", "CIN", "SF", "DAL", "NYG", "SEA", "JAX", "MIN", "LAC", "MIA")
+)
+
+```
+
+
+```{r}
+# Convert playoff teams list to a data frame
+playoff_teams_df <- data.frame(
+  season = rep(names(playoff_teams), lengths(playoff_teams)),
+  team = unlist(playoff_teams)
+)
+
+# Filter play-by-play data for playoff teams
+playoff_data <- data %>%
+  filter(season %in% playoff_teams_df$season & posteam %in% playoff_teams_df$team)
+
+```
+
+```{r}
+# Calculate playoff teams' offensive stats averages
+playoff_offensive_averages <- playoff_data %>%
+  filter(pass == 1 | rush == 1) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+print(playoff_offensive_averages)
+
+```
+
+```{r}
+# Calculate Chargers' offensive performance
+chargers_offensive_performance <- data %>%
+  filter(posteam == "LAC" & (pass == 1 | rush == 1)) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+print(chargers_offensive_performance)
+
+```
+
+```{r}
+# Create a comparison table for offensive stats
+offensive_comparison <- data.frame(
+  Stat = c("Yards Gained", "EPA", "Completion Percentage", "Interceptions"),
+  Playoff_Team_Average = c(playoff_offensive_averages$avg_yards_gained, playoff_offensive_averages$avg_epa, playoff_offensive_averages$avg_completion_pct, playoff_offensive_averages$avg_interceptions),
+  Chargers = c(chargers_offensive_performance$avg_yards_gained, chargers_offensive_performance$avg_epa, chargers_offensive_performance$avg_completion_pct, chargers_offensive_performance$avg_interceptions)
+)
+
+print(offensive_comparison)
+
+```
+
+```{r}
+# Export the offensive comparison dataframe to a CSV file
+write.csv(offensive_comparison, "chargers_vs_playoff_teams_offensive_comparison.csv", row.names = FALSE)
+
+```
+
+
+CHARGERS VS CHIEFS STATS
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2022
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+```
+
+```{r}
+# Filter play-by-play data for Chargers and Chiefs
+team_data <- data %>%
+  filter((posteam == "LAC" | posteam == "KC") | (defteam == "LAC" | defteam == "KC"))
+
+
+```
+
+
+```{r}
+# Calculate offensive stats for Chargers and Chiefs
+offensive_stats <- team_data %>%
+  filter(pass == 1 | rush == 1) %>%
+  group_by(season, posteam) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Calculate defensive stats for Chargers and Chiefs
+defensive_stats <- team_data %>%
+  filter(!is.na(epa)) %>%
+  group_by(season, defteam) %>%
+  summarise(
+    avg_sacks = mean(sack, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+
+library(tidyr)
+# Calculate offensive stats for Chargers and Chiefs
+offensive_stats <- team_data %>%
+  filter(pass == 1 | rush == 1) %>%
+  group_by(season, posteam) %>%
+  summarise(
+    avg_yards_gained = mean(yards_gained, na.rm = TRUE),
+    avg_epa = mean(epa, na.rm = TRUE),
+    avg_completion_pct = mean(complete_pass, na.rm = TRUE),
+    avg_interceptions = mean(interception, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Create offensive stats comparison table
+offensive_comparison <- offensive_stats %>%
+  pivot_wider(names_from = posteam, values_from = c(avg_yards_gained, avg_epa, avg_completion_pct, avg_interceptions))
+
+# Create defensive stats comparison table
+defensive_comparison <- defensive_stats %>%
+  pivot_wider(names_from = defteam, values_from = c(avg_sacks, avg_epa, avg_completion_pct, avg_interceptions))
+
+# Print the tables
+print(offensive_comparison)
+print(defensive_comparison)
+
+```
+
+```{r}
+# Export the offensive and defensive comparison dataframes to CSV files
+write.csv(offensive_comparison, "chargers_vs_chiefs_offensive_comparison.csv", row.names = FALSE)
+write.csv(defensive_comparison, "chargers_vs_chiefs_defensive_comparison.csv", row.names = FALSE)
+
+```
+
+
+EXPLOSIVE PLAYS CHIEFS V CHARGERS
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2023
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+```
+
+```{r}
+# Define explosive plays: 20+ yard passes or 10+ yard runs
+data <- data %>%
+  mutate(explosive_play = case_when(
+    pass == 1 & yards_gained >= 20 ~ 1,
+    rush == 1 & yards_gained >= 10 ~ 1,
+    TRUE ~ 0
+  ))
+
+```
+
+```{r}
+# Filter for Chargers and Chiefs
+team_data <- data %>%
+  filter(posteam == "LAC" | posteam == "KC")
+
+# Calculate number of explosive plays
+explosive_plays <- team_data %>%
+  group_by(posteam) %>%
+  summarise(
+    total_plays = n(),
+    explosive_plays = sum(explosive_play, na.rm = TRUE),
+    explosive_play_rate = mean(explosive_play, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+# Print the comparison of explosive plays
+print(explosive_plays)
+
+```
+
+LEAGUE AVERAGE EXPLOSIVE PLAYS VS CHARGERS
+
+```{r}
+# Load play-by-play data for all teams from 2018-2022
+all_teams_data <- map_dfr(seasons, ~ load_pbp(.x))
+
+# Define explosive plays: 20+ yard passes or 10+ yard runs
+all_teams_data <- all_teams_data %>%
+  mutate(explosive_play = case_when(
+    pass == 1 & yards_gained >= 20 ~ 1,
+    rush == 1 & yards_gained >= 10 ~ 1,
+    TRUE ~ 0
+  ))
+
+# Calculate average explosive plays per game for all teams
+league_avg_explosive_plays <- all_teams_data %>%
+  group_by(season) %>%
+  summarise(
+    total_explosive_plays = sum(explosive_play, na.rm = TRUE),
+    total_games = n_distinct(game_id),
+    avg_explosive_plays_per_game = total_explosive_plays / total_games
+  )
+
+```
+
+```{r}
+# Filter for Chargers' data
+chargers_data <- all_teams_data %>%
+  filter(posteam == "LAC")
+
+# Calculate Chargers' explosive plays per game
+chargers_explosive_plays <- chargers_data %>%
+  group_by(season) %>%
+  summarise(
+    total_explosive_plays = sum(explosive_play, na.rm = TRUE),
+    total_games = n_distinct(game_id),
+    avg_explosive_plays_per_game = total_explosive_plays / total_games
+  )
+
+```
+
+
+```{r}
+# Merge Chargers' data with league average data
+comparison <- left_join(chargers_explosive_plays, league_avg_explosive_plays, by = "season")
+
+# Print the comparison
+print(comparison)
+
+```
+
+```{r}
+# Combine Chargers' explosive plays data with league average data
+comparison <- left_join(chargers_explosive_plays, league_avg_explosive_plays, by = "season")
+
+# Rename columns for clarity
+comparison <- comparison %>%
+  rename(
+    Chargers_Total_Explosive_Plays = total_explosive_plays.x,
+    Chargers_Total_Games = total_games.x,
+    Chargers_Avg_Explosive_Plays_Per_Game = avg_explosive_plays_per_game.x,
+    League_Total_Explosive_Plays = total_explosive_plays.y,
+    League_Total_Games = total_games.y,
+    League_Avg_Explosive_Plays_Per_Game = avg_explosive_plays_per_game.y
+  )
+
+# Print the comparison to verify
+print(comparison)
+
+# Save the comparison data to a CSV file
+write.csv(comparison, "chargers_vs_league_explosive_plays_comparison.csv", row.names = FALSE)
+
+```
+
+EXPLOSIVE PLAYS PLAYOFF TEAMS VS CHARGERS
+```{r}
+# Load play-by-play data for 2018-2022
+seasons <- 2018:2023
+data <- map_dfr(seasons, ~ load_pbp(.x))
+
+```
+
+```{r}
+# Define explosive plays: 20+ yard passes or 10+ yard runs
+data <- data %>%
+  mutate(explosive_play = case_when(
+    pass == 1 & yards_gained >= 20 ~ 1,
+    rush == 1 & yards_gained >= 10 ~ 1,
+    TRUE ~ 0
+  ))
+
+```
+
+```{r}
+# List of playoff teams for each year from 2018 to 2023
+playoff_teams <- list(
+  "2018" = c("KC", "NE", "HOU", "BAL", "LAC", "IND", "NO", "LAR", "CHI", "DAL", "SEA", "PHI"),
+  "2019" = c("BAL", "KC", "NE", "HOU", "BUF", "TEN", "SF", "GB", "NO", "PHI", "SEA", "MIN"),
+  "2020" = c("KC", "BUF", "PIT", "TEN", "BAL", "CLE", "IND", "GB", "NO", "SEA", "WAS", "TB", "LAR", "CHI"),
+  "2021" = c("TEN", "KC", "BUF", "CIN", "LV", "NE", "PIT", "GB", "TB", "DAL", "LAR", "ARI", "SF", "PHI"),
+  "2022" = c("KC", "BUF", "CIN", "JAX", "LAC", "BAL", "MIA", "PHI", "SF", "MIN", "TB", "DAL", "NYG", "SEA"),
+  "2023" = c("KC", "PHI", "BUF", "CIN", "BAL", "JAX", "MIA", "SF", "DAL", "DET", "MIN", "NO", "LAC", "NYJ")  # Update with actual playoff teams if needed
+)
+
+# Convert playoff teams list to a data frame
+playoff_teams_df <- data.frame(
+  season = rep(names(playoff_teams), lengths(playoff_teams)),
+  team = unlist(playoff_teams)
+)
+
+```
+
+```{r}
+# Filter data for playoff teams
+playoff_data <- data %>%
+  filter(season %in% playoff_teams_df$season & posteam %in% playoff_teams_df$team)
+
+# Filter data for Chargers
+chargers_data <- data %>%
+  filter(posteam == "LAC")
+
+```
+
+```{r}
+# Calculate explosive plays for playoff teams
+playoff_explosive_plays <- playoff_data %>%
+  group_by(season) %>%
+  summarise(
+    total_explosive_plays = sum(explosive_play, na.rm = TRUE),
+    total_games = n_distinct(game_id),
+    avg_explosive_plays_per_game = total_explosive_plays / total_games
+  )
+
+# Calculate explosive plays for Chargers
+chargers_explosive_plays <- chargers_data %>%
+  group_by(season) %>%
+  summarise(
+    total_explosive_plays = sum(explosive_play, na.rm = TRUE),
+    total_games = n_distinct(game_id),
+    avg_explosive_plays_per_game = total_explosive_plays / total_games
+  )
+
+```
+
+```{r}
+# Merge Chargers' data with playoff teams' data
+comparison <- left_join(chargers_explosive_plays, playoff_explosive_plays, by = "season")
+
+# Rename columns for clarity
+comparison <- comparison %>%
+  rename(
+    Chargers_Total_Explosive_Plays = total_explosive_plays.x,
+    Chargers_Total_Games = total_games.x,
+    Chargers_Avg_Explosive_Plays_Per_Game = avg_explosive_plays_per_game.x,
+    Playoff_Teams_Total_Explosive_Plays = total_explosive_plays.y,
+    Playoff_Teams_Total_Games = total_games.y,
+    Playoff_Teams_Avg_Explosive_Plays_Per_Game = avg_explosive_plays_per_game.y
+  )
+
+# Print the comparison to verify
+print(comparison)
+
+```
+
+```{r}
+# Export the explosive plays comparison dataframe to a CSV file
+write.csv(comparison, "chargers_vs_playoff_teams_explosive_plays_2018_2023_comparison.csv", row.names = FALSE)
+
+```
+
+```{r}
+# List of relevant columns to compute composite scores
+relevant_columns <- c("avg_yards_gained_LAC", "avg_epa_LAC", "avg_completion_pct_LAC", "avg_interceptions_LAC")
+
+# Standardize the columns for the Chargers (LAC) to compute z-scores
+offensive_data_standardized <- offensive_comparison %>%
+  mutate(
+    yards_gained_z = scale(avg_yards_gained_LAC),
+    epa_z = scale(avg_epa_LAC),
+    completion_pct_z = scale(avg_completion_pct_LAC),
+    interceptions_z = scale(avg_interceptions_LAC)
+  )
+
+# Calculate the composite score for the Chargers' offense
+offensive_composite_score <- offensive_data_standardized %>%
+  mutate(
+    composite_score = rowMeans(select(., yards_gained_z, epa_z, completion_pct_z, interceptions_z), na.rm = TRUE)
+  )
+
+# View the composite scores for the Chargers
+print(offensive_composite_score)
+
+# For comparison, we could also compute the composite scores for other teams (e.g., league or playoff teams)
+# Let's compute a composite score for all teams in the league
+
+# Create a list of team columns for computation (adjust the column names for all teams)
+team_columns <- grep("^avg_", colnames(offensive_comparison), value = TRUE)
+
+# Standardize each team's metrics and calculate composite scores
+league_composite_scores <- offensive_comparison %>%
+  mutate(
+    across(all_of(team_columns), scale)
+  ) %>%
+  rowwise() %>%
+  mutate(
+    composite_score = mean(c_across(starts_with("avg_")), na.rm = TRUE)
+  )
+
+# Display the league's composite scores
+print(league_composite_scores)
+
+```
+
