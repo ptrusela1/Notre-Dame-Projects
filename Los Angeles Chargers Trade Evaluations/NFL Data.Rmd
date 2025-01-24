@@ -1,6 +1,6 @@
 ---
 title: "NFL Data"
-author: "Anthony Fernandez"
+author: "Paul Trusela"
 date: "2024-11-18"
 output: html_document
 ---
