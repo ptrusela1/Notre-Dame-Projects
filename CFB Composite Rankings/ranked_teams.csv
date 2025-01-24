@@ -1,0 +1,135 @@
+"team","conference","our_rank","fpi_rank","w_l","COMPOSITE_SCORE"
+"UNLV Rebels","Mountain West",1,"35","4-0",-1.46806807764389
+"Tennessee Volunteers","SEC",2,"5","4-0",-1.39080133671526
+"Georgia Bulldogs","SEC",3,"4","3-1",-1.33285128101879
+"Oregon Ducks","Big Ten",4,"9","4-0",-1.24914564501278
+"Louisville Cardinals","ACC",5,"12","3-1",-1.21695116962585
+"Alabama Crimson Tide","SEC",6,"2","4-0",-1.21051227454847
+"BYU Cougars","Big 12",7,"34","5-0",-1.13324553361984
+"Ohio State Buckeyes","Big Ten",8,"3","4-0",-1.09461216315553
+"Illinois Fighting Illini","Big Ten",9,"43","4-1",-0.959395366530434
+"Iowa State Cyclones","Big 12",10,"22","4-0",-0.940078681298278
+"Texas Longhorns","SEC",11,"1","5-0",-0.914323100988736
+"Indiana Hoosiers","Big Ten",12,"16","5-0",-0.914323100988736
+"SMU Mustangs","ACC",13,"19","4-1",-0.811300779750569
+"Clemson Tigers","ACC",14,"13","3-1",-0.804861884673183
+"Kansas State Wildcats","Big 12",15,"20","4-1",-0.804861884673183
+"Navy Midshipmen","American",16,"76","4-0",-0.798422989595798
+"Kentucky Wildcats","SEC",17,"23","3-2",-0.791984094518412
+"Ole Miss Rebels","SEC",18,"6","4-1",-0.785545199441027
+"Army Black Knights","American",19,"71","4-0",-0.746911828976714
+"Texas A&M Aggies","SEC",20,"18","4-1",-0.740472933899329
+"Vanderbilt Commodores","SEC",21,"57","2-2",-0.734034038821943
+"James Madison Dukes","Sun Belt",22,"41","4-0",-0.708278458512401
+"USC Trojans","Big Ten",23,"11","3-1",-0.69540066835763
+"Maryland Terrapins","Big Ten",24,"30","3-2",-0.682522878202859
+"Oklahoma Sooners","SEC",25,"17","4-1",-0.669645088048088
+"Michigan Wolverines","Big Ten",26,"26","4-1",-0.663206192970703
+"Iowa Hawkeyes","Big Ten",27,"24","3-1",-0.598817242196848
+"Virginia Tech Hokies","ACC",28,"42","2-3",-0.592378347119463
+"Tulane Green Wave","American",29,"40","3-2",-0.585939452042077
+"Missouri Tigers","SEC",30,"14","4-0",-0.585939452042077
+"Utah Utes","Big 12",31,"36","4-1",-0.579500556964692
+"South Carolina Gamecocks","SEC",32,"25","3-1",-0.579500556964692
+"Notre Dame Fighting Irish","FBS Indep.",33,"7","4-1",-0.566622766809921
+"Arkansas Razorbacks","SEC",34,"27","3-2",-0.560183871732535
+"Penn State Nittany Lions","Big Ten",35,"8","4-0",-0.55374497665515
+"Miami Hurricanes","ACC",36,"10","5-0",-0.55374497665515
+"Boise State Broncos","Mountain West",37,"21","3-1",-0.527989396345608
+"Pittsburgh Panthers","ACC",38,"39","4-0",-0.527989396345608
+"Rutgers Scarlet Knights","Big Ten",39,"45","4-0",-0.521550501268223
+"TCU Horned Frogs","Big 12",40,"37","3-2",-0.502233816036066
+"Baylor Bears","Big 12",41,"58","2-3",-0.470039340649139
+"Arizona State Sun Devils","Big 12",42,"54","3-1",-0.463600445571754
+"Louisiana Ragin' Cajuns","Sun Belt",43,"77","3-1",-0.431405970184826
+"Michigan State Spartans","Big Ten",44,"65","3-2",-0.399211494797899
+"Toledo Rockets","MAC",45,"74","3-1",-0.392772599720513
+"Oklahoma State Cowboys","Big 12",46,"32","3-2",-0.367017019410972
+"Cincinnati Bearcats","Big 12",47,"53","3-2",-0.360578124333586
+"Nebraska Cornhuskers","Big Ten",48,"29","4-1",-0.354139229256201
+"Colorado Buffaloes","Big 12",49,"28","4-1",-0.315505858791888
+"LSU Tigers","SEC",50,"15","4-1",-0.302628068637117
+"Virginia Cavaliers","ACC",51,"66","3-1",-0.296189173559731
+"Arizona Wildcats","Big 12",52,"44","3-1",-0.27043359325019
+"Georgia Southern Eagles","Sun Belt",53,"82","3-2",-0.251116908018033
+"Stanford Cardinal","ACC",54,"72","2-2",-0.238239117863262
+"California Golden Bears","ACC",55,"50","3-1",-0.231800222785877
+"Washington State Cougars","Pac-12",56,"55","4-1",-0.21248353755372
+"Duke Blue Devils","ACC",57,"59","5-0",-0.21248353755372
+"Georgia Tech Yellow Jackets","ACC",58,"49","3-2",-0.206044642476335
+"Boston College Eagles","ACC",59,"47","4-1",-0.206044642476335
+"Washington Huskies","Big Ten",60,"33","3-2",-0.186727957244179
+"South Florida Bulls","American",61,"92","2-3",-0.186727957244178
+"UConn Huskies","FBS Indep.",62,"67","3-2",-0.180289062166793
+"Florida Gators","SEC",63,"46","2-2",-0.167411272012022
+"Texas Tech Red Raiders","Big 12",64,"52","4-1",-0.122339006470324
+"East Carolina Pirates","American",65,"95","3-2",-0.0901445310833965
+"UCF Knights","Big 12",66,"31","3-1",-0.0708278458512401
+"North Texas Mean Green","American",67,"87","4-1",-0.0643889507738546
+"Western Kentucky Hilltoppers","CUSA",68,"89","3-2",-0.0128777901547709
+"Memphis Tigers","American",69,"64","4-1",-0.0128777901547709
+"Auburn Tigers","SEC",70,"38","2-3",-0.00643889507738546
+"Sam Houston Bearkats","CUSA",71,"91","4-1",0.00643889507738546
+"West Virginia Mountaineers","Big 12",72,"51","2-2",0.0321944753869273
+"Eastern Michigan Eagles","MAC",73,"101","4-1",0.0386333704643128
+"Bowling Green Falcons","MAC",74,"83","1-3",0.0450722655416983
+"Buffalo Bulls","MAC",75,"114","3-2",0.0579500556964692
+"Northern Illinois Huskies","MAC",76,"85","2-2",0.0643889507738547
+"UL Monroe Warhawks","Sun Belt",77,"107","3-1",0.0708278458512401
+"San José State Spartans","Mountain West",78,"73","3-1",0.103022321238167
+"Kansas Jayhawks","Big 12",79,"48","1-4",0.115900111392938
+"Wisconsin Badgers","Big Ten",80,"62","2-2",0.14165569170248
+"Northwestern Wildcats","Big Ten",81,"86","2-2",0.186727957244179
+"North Carolina Tar Heels","ACC",82,"61","3-2",0.193166852321564
+"Florida State Seminoles","ACC",83,"63","1-4",0.206044642476335
+"Coastal Carolina Chanticleers","Sun Belt",84,"84","3-1",0.225361327708491
+"Mississippi State Bulldogs","SEC",85,"70","1-4",0.263994698172804
+"UCLA Bruins","Big Ten",86,"78","1-3",0.289750278482346
+"Minnesota Golden Gophers","Big Ten",87,"56","2-3",0.315505858791888
+"Fresno State Bulldogs","Mountain West",88,"75","3-2",0.321944753869273
+"Miami (OH) RedHawks","MAC",89,"97","1-3",0.34126143910143
+"South Alabama Jaguars","Sun Belt",90,"68","2-3",0.386333704643128
+"Houston Cougars","Big 12",91,"93","1-4",0.405650389875284
+"Jacksonville State Gamecocks","CUSA",92,"102","1-3",0.418528180030055
+"Texas State Bobcats","Sun Belt",93,"81","2-2",0.424967075107441
+"Hawai'i Rainbow Warriors","Mountain West",94,"109","2-2",0.470039340649139
+"Colorado State Rams","Mountain West",95,"118","2-2",0.476478235726524
+"Western Michigan Broncos","MAC",96,"111","1-3",0.48291713080391
+"Florida International Panthers","CUSA",97,"112","2-3",0.489356025881295
+"Syracuse Orange","ACC",98,"69","3-1",0.502233816036066
+"Purdue Boilermakers","Big Ten",99,"99","1-3",0.502233816036066
+"Ohio Bobcats","MAC",100,"105","3-2",0.508672711113452
+"Oregon State Beavers","Pac-12",101,"60","3-1",0.521550501268223
+"Marshall Thundering Herd","Sun Belt",102,"79","2-2",0.527989396345608
+"Old Dominion Monarchs","Sun Belt",103,"94","1-3",0.527989396345608
+"Wake Forest Demon Deacons","ACC",104,"88","1-3",0.527989396345608
+"NC State Wolfpack","ACC",105,"80","3-2",0.566622766809921
+"Louisiana Tech Bulldogs","CUSA",106,"120","1-3",0.605256137274234
+"Nevada Wolf Pack","Mountain West",107,"96","2-3",0.682522878202859
+"San Diego State Aztecs","Mountain West",108,"113","1-3",0.682522878202859
+"New Mexico Lobos","Mountain West",109,"117","1-4",0.688961773280245
+"Charlotte 49ers","American",110,"123","2-3",0.688961773280245
+"Liberty Flames","CUSA",111,"90","4-0",0.708278458512401
+"Ball State Cardinals","MAC",112,"133","1-3",0.740472933899329
+"UAB Blazers","American",113,"110","1-3",0.817739674827954
+"Kennesaw State Owls","CUSA",114,"132","0-4",0.817739674827954
+"App State Mountaineers","Sun Belt",115,"98","2-2",0.856373045292267
+"Florida Atlantic Owls","American",116,"104","2-3",0.862811940369652
+"Tulsa Golden Hurricane","American",117,"121","2-3",0.862811940369652
+"Central Michigan Chippewas","MAC",118,"115","3-2",0.89500641575658
+"Troy Trojans","Sun Belt",119,"100","1-4",0.927200891143507
+"Middle Tennessee Blue Raiders","CUSA",120,"126","1-4",0.940078681298278
+"UTSA Roadrunners","American",121,"103","2-3",0.959395366530434
+"Akron Zips","MAC",122,"128","1-4",0.978712051762591
+"Georgia State Panthers","Sun Belt",123,"108","2-2",0.985150946839976
+"Air Force Falcons","Mountain West",124,"119","1-3",1.00446763207213
+"Temple Owls","American",125,"130","1-4",1.07529547792337
+"Arkansas State Red Wolves","Sun Belt",126,"106","2-2",1.08817326807814
+"New Mexico State Aggies","CUSA",127,"131","1-4",1.08817326807814
+"Wyoming Cowboys","Mountain West",128,"122","1-4",1.22339006470324
+"Utah State Aggies","Mountain West",129,"124","1-3",1.22339006470324
+"Massachusetts Minutemen","FBS Indep.",130,"129","1-4",1.30065680563186
+"Kent State Golden Flashes","MAC",131,"134","0-5",1.37792354656049
+"UTEP Miners","CUSA",132,"127","0-4",1.38436244163788
+"Rice Owls","American",133,"116","1-4",1.47450697272127
+"Southern Miss Golden Eagles","Sun Belt",134,"125","1-3",1.48094586779866
