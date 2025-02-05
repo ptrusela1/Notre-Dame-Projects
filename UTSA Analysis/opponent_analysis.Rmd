@@ -1,0 +1,126 @@
+---
+title: "UTSA_Analysis"
+author: "paul trusela"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(cfbfastR)
+library(randomForest)
+
+# Load game data for a specific season (e.g., 2024)
+game_data <- cfbd_game_info(year=2024)
+# Check the data structure
+head(game_data)
+
+
+```
+
+```{r}
+# Load play-by-play data for 2024 with EPA and WPA
+pbp_data <- cfbd_pbp_data(year = 2024)
+
+# Check for any missing data or inconsistencies
+head(pbp_data)
+
+```
+
+```{r}
+# Load team stats for the 2024 season
+team_stats <- cfbd_stats_season_team(year = 2024)
+
+# Load player stats for the 2024 season
+player_stats <- cfbd_stats_season_player(year = 2024)
+
+# View the first few rows to understand the structure
+head(team_stats)
+head(player_stats)
+
+```
+
+```{r}
+# Check for missing values and handle them
+summary(game_data)
+
+# Filter out incomplete games
+game_data_clean <- game_data %>%
+  filter(completed == 1)
+
+# Select relevant columns for further analysis
+game_data_clean <- game_data_clean %>%
+  select(game_id, season, week, home_team, away_team, home_points, away_points, 
+         home_pregame_elo, away_pregame_elo, home_post_win_prob, away_post_win_prob,
+         excitement_index, neutral_site, venue)
+
+# Check the cleaned data
+head(game_data_clean)
+
+```
+
+```{r}
+# Create new features
+game_data_clean <- game_data_clean %>%
+  mutate(
+    point_diff = home_points - away_points,  # Point difference
+    elo_diff = home_pregame_elo - away_pregame_elo,  # ELO difference
+    home_field_advantage = ifelse(neutral_site == 1, 0, 1)  # Home field advantage indicator
+  )
+
+# View the cleaned data with new features
+head(game_data_clean)
+
+```
+
+```{r}
+library(ggplot2)
+
+# Visualize the distribution of home and away team scores
+ggplot(game_data_clean, aes(x = home_points)) +
+  geom_histogram(binwidth = 7, fill = "blue", alpha = 0.6) +
+  geom_histogram(aes(x = away_points), binwidth = 7, fill = "red", alpha = 0.6) +
+  labs(title = "Distribution of Home and Away Team Scores", x = "Points Scored", y = "Frequency") +
+  theme_minimal()
+
+```
+
+```{r}
+# Scatter plot of ELO difference vs point difference
+ggplot(game_data_clean, aes(x = elo_diff, y = point_diff)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "ELO Difference vs Point Difference", x = "ELO Difference", y = "Point Difference") +
+  theme_minimal()
+
+```
+
+```{r}
+# Scatter plot of excitement index vs point difference
+ggplot(game_data_clean, aes(x = excitement_index, y = point_diff)) +
+  geom_point(color = "green", alpha = 0.6) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Excitement Index vs Point Difference", x = "Excitement Index", y = "Point Difference") +
+  theme_minimal()
+
+```
+
+```{r}
+# Ensure that we are working with the cleaned dataset for both model training and predictions
+game_data_clean <- game_data_clean %>%
+  filter(!is.na(elo_diff), !is.na(excitement_index), !is.na(home_field_advantage))  # Filter out rows with NA in features
+
+# Train a logistic regression model to predict home team win (without attendance)
+logit_model <- glm(home_points > away_points ~ elo_diff + excitement_index + home_field_advantage,
+                   data = game_data_clean, 
+                   family = "binomial")
+
+# Predict probabilities (make sure the number of rows matches)
+game_data_clean$predicted_win_prob <- predict(logit_model, newdata = game_data_clean, type = "response")
+
+# View the predictions
+head(game_data_clean)
+
+```
+
+
+
