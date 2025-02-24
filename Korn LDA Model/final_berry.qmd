@@ -10,122 +10,138 @@ format: html
 #import pandas as pd
 #import re
 
+# Set your Genius API access token
 GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
 
+# Initialize the Genius API client using the provided token
 genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
-genius.remove_section_headers = True  
-genius.skip_non_songs = True  
+genius.remove_section_headers = True  # Remove section headers (e.g., [Chorus]) from lyrics
+genius.skip_non_songs = True           # Skip entries that are not actual songs
 
+# Search for the artist "Korn" and sort songs by popularity
 artist = genius.search_artist("Korn", sort="popularity")
 
+# Define a function to clean the lyrics text
 def clean_lyrics(lyrics):
     if lyrics:
-        lyrics = lyrics.replace("\n", " ")  
-        lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-        lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics) 
-        lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+        lyrics = lyrics.replace("\n", " ")            # Replace newline characters with spaces
+        lyrics = re.sub(r"\[.*?\]", "", lyrics)         # Remove any text inside square brackets (often metadata)
+        lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  # Remove text within parentheses or brackets
+        lyrics = re.sub(r"^\s+|\s+$", "", lyrics)        # Remove leading and trailing whitespace
     return lyrics
 
+# Create a list of dictionaries, each containing a song title and its cleaned lyrics
 song_data = [{"title": song.title, "lyrics": clean_lyrics(song.lyrics)} for song in artist.songs]
 
+# Convert the list to a pandas DataFrame
 df = pd.DataFrame(song_data)
 
+# Define the output CSV filename for the cleaned lyrics
 csv_filename = "korn_clean_lyrics.csv"
+
+# Save the DataFrame to a CSV file
 df.to_csv(csv_filename, index=False, encoding='utf-8')
 
+# Print a message indicating that the file has been saved
 print(f"Clean lyrics saved to {csv_filename}")
-
-
 ```
 
 ```
-import pandas as pd
-import re
 
+# Read the previously saved CSV file containing the cleaned lyrics
 file_path = "korn_clean_lyrics.csv" 
 df = pd.read_csv(file_path)
 
+# Define an additional cleaning function for the lyrics column
 def clean_lyrics(lyrics):
     if pd.isna(lyrics): 
         return ""
-    lyrics = re.sub(r"^\d+\s*", "", lyrics) 
-    lyrics = re.sub(r"\bcontributor[s]?\b", "", lyrics, flags=re.IGNORECASE)  
-    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-    lyrics = re.sub(r"\s+", " ", lyrics).strip()  
+    lyrics = re.sub(r"^\d+\s*", "", lyrics)                      # Remove leading numbers and any whitespace
+    lyrics = re.sub(r"\bcontributor[s]?\b", "", lyrics, flags=re.IGNORECASE)  # Remove the word "contributor(s)"
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)                        # Remove any text within square brackets
+    lyrics = re.sub(r"\s+", " ", lyrics).strip()                   # Replace multiple spaces with a single space and trim
     return lyrics
 
+# Apply the cleaning function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(clean_lyrics)
 
+# Define the output file path for the updated CSV
 cleaned_file_path = "korn_clean_lyrics_updated.csv"
+# Save the updated DataFrame to a new CSV file
 df.to_csv(cleaned_file_path, index=False, encoding="utf-8")
 
-print(f"Cleaned lyrics saved to {cleaned_file_path}")
-
 ```
 
 ```
-import pandas as pd
 
+# Read the updated CSV file with cleaned lyrics
 file_path = "korn_clean_lyrics_updated.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to filter out songs based on their title
 def filter_songs(title):
     if pd.isna(title):  
         return False
-    title = title.lower()
+    title = title.lower()  # Convert title to lowercase for uniform comparison
+    # Return False if title contains any of the unwanted keywords; otherwise, return True
     return not ("live" in title or "remix" in title or "mix" in title
             or "demo" in title or "clean" in title or "cover" in title
             or "radio" in title or "edit" in title or "acoustic" in title or "show" in title or "mass" in title or "version" in title or "dub" in title or "acapella" in title or "woodstock" in title)
 
-
+# Filter the DataFrame to only include songs that pass the title check
 df_filtered = df[df["title"].apply(filter_songs)].reset_index(drop=True)
 
+# Define the output CSV filename for the filtered data
 filtered_file_path = "korn_clean_lyrics_filtered.csv"
+# Save the filtered DataFrame to CSV
 df_filtered.to_csv(filtered_file_path, index=False, encoding="utf-8")
 
-print(f"Filtered lyrics saved to {filtered_file_path}")
-
 ```
 
 ```
-import pandas as pd
-import re
-
+# Read the filtered CSV file
 file_path = "korn_clean_lyrics_filtered.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to remove a specific unwanted text pattern from the lyrics
 def clean_lyrics_text(lyrics):
     if pd.isna(lyrics):  
         return ""
+    # Remove text that starts with "Contributors" and ends with "Lyrics"
     return re.sub(r"Contributors.*?Lyrics", "", lyrics, flags=re.IGNORECASE).strip()
 
+# Apply the text cleaning function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(clean_lyrics_text)
 
+# Define the output file name for the final cleaned lyrics
 final_cleaned_file_path = "korn_final_clean_lyrics.csv"
+# Save the DataFrame with cleaned lyrics to CSV
 df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8")
 
-print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
-
 ```
 
 ```
-import pandas as pd
-import re
-
+# Read the final cleaned CSV file
 file_path = "korn_final_clean_lyrics.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to remove promotional text from the lyrics
 def remove_promotional_text(lyrics):
     if pd.isna(lyrics):  
         return ""
+    # Remove any text starting with "See Korn Live" and ending with "Embed"
     lyrics = re.sub(r"See Korn Live.*?Embed", "", lyrics, flags=re.IGNORECASE).strip()  
     return lyrics
 
+# Apply the promotional text removal function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(remove_promotional_text)
 
+# Define the output file name with no ads/promotional content
 final_cleaned_file_path = "korn_final_clean_lyrics_no_ads.csv"
+# Save the updated DataFrame to CSV with a specified encoding for better compatibility
 df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8-sig")
 
+# Print a message indicating that the final cleaned lyrics without ads have been saved
 print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
 
 ```
@@ -139,50 +155,62 @@ import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 
-
+# Read the CSV file containing the final cleaned lyrics without ads
 df = pd.read_csv("C:/Users/pauly/OneDrive/Documents/GitHub/Notre-Dame-Projects/Korn LDA Model/korn_final_clean_lyrics_no_ads.csv")
 
+# Define a function to preprocess lyrics by lowercasing and removing punctuation
 def preprocess_lyrics(lyrics):
     if pd.isna(lyrics):  
         return ""
+    # Remove punctuation and convert text to lowercase
     lyrics = re.sub(r"[^\w\s]", "", lyrics.lower())  
     return lyrics
 
+# Apply preprocessing to each song's lyrics
 df["processed_lyrics"] = df["lyrics"].apply(preprocess_lyrics)
 
+# Combine all processed lyrics into one large string for analysis
 all_lyrics = " ".join(df["processed_lyrics"])
 
+# Count the frequency of each word in the lyrics
 word_counts = Counter(all_lyrics.split())
 
+# Get the 20 most common words and print them
 most_common_words = word_counts.most_common(20)
 print("\nMost Common Words in Korn Lyrics:")
 for word, freq in most_common_words:
     print(f"{word}: {freq}")
 
+# Generate a word cloud visualization using the combined lyrics text
 wordcloud = WordCloud(width=800, height=400, background_color="black").generate(all_lyrics)
-
 plt.figure(figsize=(10, 5))
 plt.imshow(wordcloud, interpolation="bilinear")
 plt.axis("off")
 plt.title("Word Cloud of Korn Lyrics")
 plt.show()
 
+# Convert the processed lyrics into a document-term matrix with a maximum of 500 features, ignoring English stop words
 vectorizer = CountVectorizer(stop_words="english", max_features=500)
 X = vectorizer.fit_transform(df["processed_lyrics"])
 
+# Define the number of topics for LDA (Latent Dirichlet Allocation)
 num_topics = 5
 lda_model = LatentDirichletAllocation(n_components=num_topics, random_state=42)
 lda_model.fit(X)
 
+# Extract the feature names (words) from the vectorizer
 words = vectorizer.get_feature_names_out()
 topics = {}
 
 print("\nLDA Topics in Korn Lyrics:")
+# Iterate over each topic produced by the LDA model
 for topic_idx, topic in enumerate(lda_model.components_):
+    # Get the top 10 words for each topic by selecting those with the highest weight
     top_words = [words[i] for i in topic.argsort()[-10:]]  
     topics[f"Topic {topic_idx+1}"] = top_words
     print(f"Topic {topic_idx+1}: {', '.join(top_words)}")
 
+# Convert the topics dictionary to a DataFrame for easier viewing
 topics_df = pd.DataFrame(topics)
 print("\nLDA Topics DataFrame:\n", topics_df)
 
@@ -195,41 +223,52 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from textblob import TextBlob
 
+# Remove any extra spaces from column names
 df.columns = df.columns.str.strip()
 
+# Check if there is an 'album' column in the dataset
 if 'album' in df.columns:
+    # Define a function to calculate the sentiment polarity of a given text using TextBlob
     def get_sentiment(text):
         return TextBlob(str(text)).sentiment.polarity
 
+    # Apply sentiment analysis to the lyrics column and store the result in a new column
     df["sentiment_score"] = df["lyrics"].apply(get_sentiment)
 
+    # Calculate the average sentiment score per album
     sentiment_by_album = df.groupby("album")["sentiment_score"].mean().reset_index()
 
+    # Create a bar plot to visualize average sentiment scores for each album
     plt.figure(figsize=(12, 6))
     sns.barplot(x="sentiment_score", y="album", data=sentiment_by_album, palette="coolwarm")
     plt.xlabel("Average Sentiment Score")
     plt.ylabel("Album")
     plt.title("Sentiment Analysis of Korn Albums")
-    plt.axvline(0, color="black", linestyle="dashed")  
+    plt.axvline(0, color="black", linestyle="dashed")  # Add a vertical line at 0 for reference
 
 else:
+    # If there is no album column, print a message indicating that sentiment analysis by album cannot be performed
     print("The dataset does not contain an 'album' column. Sentiment analysis by album requires album information.")
 
 ```
 
 ```{python}
+# Sort the albums by their average sentiment score in descending order
 sentiment_by_album_sorted = sentiment_by_album.sort_values(by="sentiment_score", ascending=False)
 
 plt.figure(figsize=(12, 6))
+# Create a bar plot using the sorted sentiment data
 sns.barplot(x="sentiment_score", y="album", data=sentiment_by_album_sorted, palette="coolwarm")
 plt.xlabel("Average Sentiment Score")
 plt.ylabel("Album")
 plt.title("Sentiment Analysis of Korn Albums (Sorted)")
 plt.axvline(0, color="black", linestyle="dashed")
 plt.show()
+
 ```
 
 ```{python}
+# Define the desired order of albums for visualization
 album_order = [
     "Korn", "Life is Peachy", "Follow The Leader", "Issues", "Untouchables",
     "Take a Look in the Mirror", "See You On The Other Side", "Untitled",
@@ -237,135 +276,162 @@ album_order = [
     "The Serenity of Suffering", "The Nothing", "Requiem"
 ]
 
+# Convert the 'album' column to a categorical type with a specific order
 sentiment_by_album["album"] = pd.Categorical(sentiment_by_album["album"], categories=album_order, ordered=True)
+# Sort the DataFrame based on the defined album order
 sentiment_by_album_sorted = sentiment_by_album.sort_values("album")
 
 plt.figure(figsize=(12, 6))
+# Create a line plot to visualize the trend of sentiment scores across albums
 sns.lineplot(x=sentiment_by_album_sorted["album"], y=sentiment_by_album_sorted["sentiment_score"], marker="o")
-plt.xticks(rotation=45, ha="right")
+plt.xticks(rotation=45, ha="right")  # Rotate album labels for better readability
 plt.xlabel("Album")
 plt.ylabel("Average Sentiment Score")
 plt.title("Sentiment Trend Across Korn Albums")
-plt.axhline(0, color="black", linestyle="dashed") 
+plt.axhline(0, color="black", linestyle="dashed")  # Add a horizontal line at 0
 plt.show()
-
 ```
 
 ```{python}
 import pronouncing
-def count_rhymes(lyrics):
-    words = lyrics.split()
-    rhymes = [pronouncing.rhymes(word) for word in words]
-    return sum([len(r) for r in rhymes])
 
+# Define a function to count the number of rhymes in the lyrics using the pronouncing library
+def count_rhymes(lyrics):
+    words = lyrics.split()  # Split the lyrics into individual words
+    rhymes = [pronouncing.rhymes(word) for word in words]  # Get a list of rhyming words for each word
+    return sum([len(r) for r in rhymes])  # Sum up the total number of rhymes found
+
+# Apply the rhyme counting function to each song's lyrics and store the result in a new column
 df["rhyme_count"] = df["lyrics"].apply(count_rhymes)
 
+# Calculate the average rhyme count per album
 rhyme_by_album = df.groupby("album")["rhyme_count"].mean().reset_index()
 
+# Sort the albums by average rhyme count in descending order
 rhyme_by_album = rhyme_by_album.sort_values(by="rhyme_count", ascending=False)
 
 plt.figure(figsize=(12, 6))
+# Create a bar plot to visualize the average rhyme density per album
 sns.barplot(x="rhyme_count", y="album", data=rhyme_by_album, palette="magma")
 plt.xlabel("Average Rhyme Count per Song")
 plt.ylabel("Album")
 plt.title("Rhyme Density Across Korn Albums")
 plt.show()
-
 ```
 
 ```{python}
+# Define the word you want to track in the lyrics; replace "....." with the actual word
 word_to_track = "....."  # Change to any word you want to track
 
+# Count the occurrences of the specified word in each song's lyrics (case-insensitive)
 df["word_count"] = df["lyrics"].apply(lambda x: x.lower().split().count(word_to_track))
+# Sum the word counts for each album
 word_trend = df.groupby("album")["word_count"].sum().reset_index()
 
 plt.figure(figsize=(12, 6))
+# Create a line plot to show how the frequency of the tracked word changes across albums
 sns.lineplot(x="album", y="word_count", data=word_trend, marker="o")
-plt.xticks(rotation=45)
+plt.xticks(rotation=45)  # Rotate album labels for better readability
 plt.xlabel("Album")
 plt.ylabel(f"Occurrences of '{word_to_track}'")
 plt.title(f"Frequency of '{word_to_track}' Across Korn Albums")
 plt.show()
-
 ```
 
 ```{python}
 import pandas as pd
 from textblob import TextBlob
 
+# Remove any extra spaces from the DataFrame's column names
 df.columns = df.columns.str.strip()
 
+# If the "sentiment_score" column doesn't exist, create it by computing sentiment polarity for each song's lyrics
 if "sentiment_score" not in df.columns:
     df["sentiment_score"] = df["lyrics"].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
 
+# Get the top 10 songs with the highest sentiment scores (most positive)
 top_positive = df.nlargest(10, "sentiment_score")[["title", "sentiment_score"]]
+# Get the top 10 songs with the lowest sentiment scores (most negative)
 top_negative = df.nsmallest(10, "sentiment_score")[["title", "sentiment_score"]]
 
+# Print out the results for positive and negative sentiment songs
 print(top_positive)
 print(top_negative)
-```
-
 
 ```
-import lyricsgenius
-import pandas as pd
-import re
 
+
+```
+# Set your Genius API access token
 GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
+# Initialize the Genius API client
 genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
 
+# Define a function to retrieve lyrics for a given artist
 def get_lyrics(artist_name, max_songs=20):
+    # Search for the artist and retrieve up to 'max_songs' sorted by popularity
     artist = genius.search_artist(artist_name, max_songs=max_songs, sort="popularity")
+    # Create a list of dictionaries containing each song's title and lyrics
     song_data = [{"title": song.title, "lyrics": song.lyrics} for song in artist.songs]
+    # Return the data as a pandas DataFrame
     return pd.DataFrame(song_data)
 
+# List of bands to retrieve lyrics for
 bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+# Dictionary to store each band's DataFrame of lyrics
 band_lyrics = {}
 
+# Loop through each band, retrieve their lyrics, and store the DataFrame in the dictionary
 for band in bands:
     band_lyrics[band] = get_lyrics(band, max_songs=30)
 
+# Save each band's lyrics DataFrame to a CSV file
 for band, df in band_lyrics.items():
     df.to_csv(f"{band}_lyrics.csv", index=False)
 
 ```
 
 ```
-import pandas as pd
-import re
-
+# Define a function to clean up the lyrics text
 def clean_lyrics(lyrics):
     if pd.isna(lyrics):  
         return ""
-    lyrics = lyrics.replace("\n", " ")  
-    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  
-    lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+    lyrics = lyrics.replace("\n", " ")  # Replace newline characters with spaces
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)  # Remove any text within square brackets
+    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  # Remove text within parentheses or brackets
+    lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  # Trim leading and trailing whitespace
     return lyrics
 
+# List of bands for which CSV files have been saved earlier
 bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+# Dictionary to hold DataFrames after cleaning the lyrics
 band_dfs = {}
 
+# Loop through each band and process its CSV file
 for band in bands:
-    file_path = f"{band}_lyrics.csv" 
-    df = pd.read_csv(file_path)
-    df["lyrics"] = df["lyrics"].apply(clean_lyrics)
-    band_dfs[band] = df
+    file_path = f"{band}_lyrics.csv"  # Construct the file path
+    df = pd.read_csv(file_path)  # Read the CSV into a DataFrame
+    df["lyrics"] = df["lyrics"].apply(clean_lyrics)  # Apply the cleaning function to the lyrics column
+    band_dfs[band] = df  # Store the cleaned DataFrame in the dictionary
 
 ```
 
 ```
 from textblob import TextBlob
 
+# Define a function to compute the sentiment polarity of a text
 def get_sentiment(text):
     return TextBlob(str(text)).sentiment.polarity
 
+# Dictionary to store the average sentiment score for each band
 sentiment_scores = {}
 
+# Loop through each band's DataFrame, compute sentiment for each song, and get the mean sentiment
 for band, df in band_dfs.items():
     df["sentiment_score"] = df["lyrics"].apply(get_sentiment)
-    sentiment_scores[band] = df["sentiment_score"].mean()  
+    sentiment_scores[band] = df["sentiment_score"].mean()  # Calculate the average sentiment score for the band
 
+# Convert the sentiment scores dictionary into a DataFrame for further analysis/visualization
 sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=["Band", "Sentiment Score"])
 
 ```
@@ -374,13 +440,15 @@ sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=["Band", "Sentimen
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Set up the figure size for the plot
 plt.figure(figsize=(10, 5))
+# Create a bar plot to compare the average sentiment score of lyrics across bands
 sns.barplot(x="Band", y="Sentiment Score", data=sentiment_df, palette="coolwarm")
-plt.xlabel("Band")
-plt.ylabel("Average Sentiment Score")
-plt.title("Comparison of Lyric Sentiment Across Nu-Metal Bands")
-plt.axhline(0, color="black", linestyle="dashed")  
-plt.show()
+plt.xlabel("Band")  # Label for the x-axis
+plt.ylabel("Average Sentiment Score")  # Label for the y-axis
+plt.title("Comparison of Lyric Sentiment Across Nu-Metal Bands")  # Title of the plot
+plt.axhline(0, color="black", linestyle="dashed")  # Draw a dashed horizontal line at 0 for reference
+plt.show()  # Display the plot
 
 ```
 
