@@ -306,7 +306,7 @@ print(top_negative)
 ```
 
 
-```{python}
+```
 import lyricsgenius
 import pandas as pd
 import re
