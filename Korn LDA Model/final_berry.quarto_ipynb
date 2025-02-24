@@ -43,14 +43,9 @@
         "print(f\"Clean lyrics saved to {csv_filename}\")\n",
         "\n",
         "\n",
-        "```\n"
-      ],
-      "id": "de0044e3"
-    },
-    {
-      "cell_type": "code",
-      "metadata": {},
-      "source": [
+        "```\n",
+        "\n",
+        "```\n",
         "import pandas as pd\n",
         "import re\n",
         "\n",
@@ -71,16 +66,11 @@
         "cleaned_file_path = \"korn_clean_lyrics_updated.csv\"\n",
         "df.to_csv(cleaned_file_path, index=False, encoding=\"utf-8\")\n",
         "\n",
-        "print(f\"Cleaned lyrics saved to {cleaned_file_path}\")"
-      ],
-      "id": "69a4019b",
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "metadata": {},
-      "source": [
+        "print(f\"Cleaned lyrics saved to {cleaned_file_path}\")\n",
+        "\n",
+        "```\n",
+        "\n",
+        "```\n",
         "import pandas as pd\n",
         "\n",
         "file_path = \"korn_clean_lyrics_updated.csv\"  \n",
@@ -100,16 +90,11 @@
         "filtered_file_path = \"korn_clean_lyrics_filtered.csv\"\n",
         "df_filtered.to_csv(filtered_file_path, index=False, encoding=\"utf-8\")\n",
         "\n",
-        "print(f\"Filtered lyrics saved to {filtered_file_path}\")"
-      ],
-      "id": "f8ff27d3",
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "metadata": {},
-      "source": [
+        "print(f\"Filtered lyrics saved to {filtered_file_path}\")\n",
+        "\n",
+        "```\n",
+        "\n",
+        "```\n",
         "import pandas as pd\n",
         "import re\n",
         "\n",
@@ -126,16 +111,11 @@
         "final_cleaned_file_path = \"korn_final_clean_lyrics.csv\"\n",
         "df.to_csv(final_cleaned_file_path, index=False, encoding=\"utf-8\")\n",
         "\n",
-        "print(f\"Final cleaned lyrics saved to {final_cleaned_file_path}\")"
-      ],
-      "id": "ae650edf",
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "metadata": {},
-      "source": [
+        "print(f\"Final cleaned lyrics saved to {final_cleaned_file_path}\")\n",
+        "\n",
+        "```\n",
+        "\n",
+        "```\n",
         "import pandas as pd\n",
         "import re\n",
         "\n",
@@ -153,11 +133,11 @@
         "final_cleaned_file_path = \"korn_final_clean_lyrics_no_ads.csv\"\n",
         "df.to_csv(final_cleaned_file_path, index=False, encoding=\"utf-8-sig\")\n",
         "\n",
-        "print(f\"Final cleaned lyrics saved to {final_cleaned_file_path}\")"
+        "print(f\"Final cleaned lyrics saved to {final_cleaned_file_path}\")\n",
+        "\n",
+        "```\n"
       ],
-      "id": "a34c4719",
-      "execution_count": null,
-      "outputs": []
+      "id": "e524b270"
     },
     {
       "cell_type": "code",
@@ -218,7 +198,7 @@
         "topics_df = pd.DataFrame(topics)\n",
         "print(\"\\nLDA Topics DataFrame:\\n\", topics_df)"
       ],
-      "id": "021fe119",
+      "id": "2d293940",
       "execution_count": null,
       "outputs": []
     },
@@ -251,7 +231,7 @@
         "else:\n",
         "    print(\"The dataset does not contain an 'album' column. Sentiment analysis by album requires album information.\")"
       ],
-      "id": "2c2cb774",
+      "id": "069510a0",
       "execution_count": null,
       "outputs": []
     },
@@ -269,7 +249,7 @@
         "plt.axvline(0, color=\"black\", linestyle=\"dashed\")\n",
         "plt.show()"
       ],
-      "id": "55454298",
+      "id": "b64f62c8",
       "execution_count": null,
       "outputs": []
     },
@@ -296,7 +276,7 @@
         "plt.axhline(0, color=\"black\", linestyle=\"dashed\") \n",
         "plt.show()"
       ],
-      "id": "b9abf88b",
+      "id": "3ed08411",
       "execution_count": null,
       "outputs": []
     },
@@ -323,7 +303,7 @@
         "plt.title(\"Rhyme Density Across Korn Albums\")\n",
         "plt.show()"
       ],
-      "id": "1a233015",
+      "id": "f7a574e1",
       "execution_count": null,
       "outputs": []
     },
@@ -344,7 +324,7 @@
         "plt.title(f\"Frequency of '{word_to_track}' Across Korn Albums\")\n",
         "plt.show()"
       ],
-      "id": "6b1e96ed",
+      "id": "394662b4",
       "execution_count": null,
       "outputs": []
     },
@@ -366,7 +346,7 @@
         "print(top_positive)\n",
         "print(top_negative)"
       ],
-      "id": "1cbe5d3a",
+      "id": "b2b6463f",
       "execution_count": null,
       "outputs": []
     },
@@ -398,7 +378,7 @@
         "\n",
         "```\n"
       ],
-      "id": "093a980a"
+      "id": "60066614"
     },
     {
       "cell_type": "code",
@@ -425,7 +405,7 @@
         "    df[\"lyrics\"] = df[\"lyrics\"].apply(clean_lyrics)\n",
         "    band_dfs[band] = df"
       ],
-      "id": "cf08551d",
+      "id": "c2aed266",
       "execution_count": null,
       "outputs": []
     },
@@ -446,7 +426,7 @@
         "\n",
         "sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=[\"Band\", \"Sentiment Score\"])"
       ],
-      "id": "167f697a",
+      "id": "ad80e8ab",
       "execution_count": null,
       "outputs": []
     },
@@ -465,7 +445,7 @@
         "plt.axhline(0, color=\"black\", linestyle=\"dashed\")  \n",
         "plt.show()"
       ],
-      "id": "d68cab2d",
+      "id": "b17e2af8",
       "execution_count": null,
       "outputs": []
     }

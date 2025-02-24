@@ -330,7 +330,7 @@ for band, df in band_lyrics.items():
 
 ```
 
-```{python}
+```
 import pandas as pd
 import re
 
@@ -354,7 +354,7 @@ for band in bands:
 
 ```
 
-```{python}
+```
 from textblob import TextBlob
 
 def get_sentiment(text):
