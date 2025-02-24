@@ -370,7 +370,7 @@ sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=["Band", "Sentimen
 
 ```
 
-```{python}
+```
 import matplotlib.pyplot as plt
 import seaborn as sns
 
