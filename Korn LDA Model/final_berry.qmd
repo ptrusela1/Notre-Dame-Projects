@@ -1,0 +1,386 @@
+---
+title: "Korn Analysis"
+format: html
+---
+
+
+
+```
+#import lyricsgenius
+#import pandas as pd
+#import re
+
+GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
+
+genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
+genius.remove_section_headers = True  
+genius.skip_non_songs = True  
+
+artist = genius.search_artist("Korn", sort="popularity")
+
+def clean_lyrics(lyrics):
+    if lyrics:
+        lyrics = lyrics.replace("\n", " ")  
+        lyrics = re.sub(r"\[.*?\]", "", lyrics)  
+        lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics) 
+        lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+    return lyrics
+
+song_data = [{"title": song.title, "lyrics": clean_lyrics(song.lyrics)} for song in artist.songs]
+
+df = pd.DataFrame(song_data)
+
+csv_filename = "korn_clean_lyrics.csv"
+df.to_csv(csv_filename, index=False, encoding='utf-8')
+
+print(f"Clean lyrics saved to {csv_filename}")
+
+
+```
+
+```{python}
+import pandas as pd
+import re
+
+file_path = "korn_clean_lyrics.csv" 
+df = pd.read_csv(file_path)
+
+def clean_lyrics(lyrics):
+    if pd.isna(lyrics): 
+        return ""
+    lyrics = re.sub(r"^\d+\s*", "", lyrics) 
+    lyrics = re.sub(r"\bcontributor[s]?\b", "", lyrics, flags=re.IGNORECASE)  
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
+    lyrics = re.sub(r"\s+", " ", lyrics).strip()  
+    return lyrics
+
+df["lyrics"] = df["lyrics"].apply(clean_lyrics)
+
+cleaned_file_path = "korn_clean_lyrics_updated.csv"
+df.to_csv(cleaned_file_path, index=False, encoding="utf-8")
+
+print(f"Cleaned lyrics saved to {cleaned_file_path}")
+
+```
+
+```{python}
+import pandas as pd
+
+file_path = "korn_clean_lyrics_updated.csv"  
+df = pd.read_csv(file_path)
+
+def filter_songs(title):
+    if pd.isna(title):  
+        return False
+    title = title.lower()
+    return not ("live" in title or "remix" in title or "mix" in title
+            or "demo" in title or "clean" in title or "cover" in title
+            or "radio" in title or "edit" in title or "acoustic" in title or "show" in title or "mass" in title or "version" in title or "dub" in title or "acapella" in title or "woodstock" in title)
+
+
+df_filtered = df[df["title"].apply(filter_songs)].reset_index(drop=True)
+
+filtered_file_path = "korn_clean_lyrics_filtered.csv"
+df_filtered.to_csv(filtered_file_path, index=False, encoding="utf-8")
+
+print(f"Filtered lyrics saved to {filtered_file_path}")
+
+```
+
+```{python}
+import pandas as pd
+import re
+
+file_path = "korn_clean_lyrics_filtered.csv"  
+df = pd.read_csv(file_path)
+
+def clean_lyrics_text(lyrics):
+    if pd.isna(lyrics):  
+        return ""
+    return re.sub(r"Contributors.*?Lyrics", "", lyrics, flags=re.IGNORECASE).strip()
+
+df["lyrics"] = df["lyrics"].apply(clean_lyrics_text)
+
+final_cleaned_file_path = "korn_final_clean_lyrics.csv"
+df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8")
+
+print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
+
+```
+
+```{python}
+import pandas as pd
+import re
+
+file_path = "korn_final_clean_lyrics.csv"  
+df = pd.read_csv(file_path)
+
+def remove_promotional_text(lyrics):
+    if pd.isna(lyrics):  
+        return ""
+    lyrics = re.sub(r"See Korn Live.*?Embed", "", lyrics, flags=re.IGNORECASE).strip()  
+    return lyrics
+
+df["lyrics"] = df["lyrics"].apply(remove_promotional_text)
+
+final_cleaned_file_path = "korn_final_clean_lyrics_no_ads.csv"
+df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8-sig")
+
+print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
+
+```
+
+```{python}
+import pandas as pd
+import re
+from collections import Counter
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+
+
+df = pd.read_csv("C:/Users/pauly/OneDrive/Documents/GitHub/Notre-Dame-Projects/Korn LDA Model/korn_final_clean_lyrics_no_ads.csv")
+
+def preprocess_lyrics(lyrics):
+    if pd.isna(lyrics):  
+        return ""
+    lyrics = re.sub(r"[^\w\s]", "", lyrics.lower())  
+    return lyrics
+
+df["processed_lyrics"] = df["lyrics"].apply(preprocess_lyrics)
+
+all_lyrics = " ".join(df["processed_lyrics"])
+
+word_counts = Counter(all_lyrics.split())
+
+most_common_words = word_counts.most_common(20)
+print("\nMost Common Words in Korn Lyrics:")
+for word, freq in most_common_words:
+    print(f"{word}: {freq}")
+
+wordcloud = WordCloud(width=800, height=400, background_color="black").generate(all_lyrics)
+
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud, interpolation="bilinear")
+plt.axis("off")
+plt.title("Word Cloud of Korn Lyrics")
+plt.show()
+
+vectorizer = CountVectorizer(stop_words="english", max_features=500)
+X = vectorizer.fit_transform(df["processed_lyrics"])
+
+num_topics = 5
+lda_model = LatentDirichletAllocation(n_components=num_topics, random_state=42)
+lda_model.fit(X)
+
+words = vectorizer.get_feature_names_out()
+topics = {}
+
+print("\nLDA Topics in Korn Lyrics:")
+for topic_idx, topic in enumerate(lda_model.components_):
+    top_words = [words[i] for i in topic.argsort()[-10:]]  
+    topics[f"Topic {topic_idx+1}"] = top_words
+    print(f"Topic {topic_idx+1}: {', '.join(top_words)}")
+
+topics_df = pd.DataFrame(topics)
+print("\nLDA Topics DataFrame:\n", topics_df)
+
+```
+
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from textblob import TextBlob
+
+df.columns = df.columns.str.strip()
+
+if 'album' in df.columns:
+    def get_sentiment(text):
+        return TextBlob(str(text)).sentiment.polarity
+
+    df["sentiment_score"] = df["lyrics"].apply(get_sentiment)
+
+    sentiment_by_album = df.groupby("album")["sentiment_score"].mean().reset_index()
+
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x="sentiment_score", y="album", data=sentiment_by_album, palette="coolwarm")
+    plt.xlabel("Average Sentiment Score")
+    plt.ylabel("Album")
+    plt.title("Sentiment Analysis of Korn Albums")
+    plt.axvline(0, color="black", linestyle="dashed")  
+
+else:
+    print("The dataset does not contain an 'album' column. Sentiment analysis by album requires album information.")
+
+```
+
+```{python}
+sentiment_by_album_sorted = sentiment_by_album.sort_values(by="sentiment_score", ascending=False)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x="sentiment_score", y="album", data=sentiment_by_album_sorted, palette="coolwarm")
+plt.xlabel("Average Sentiment Score")
+plt.ylabel("Album")
+plt.title("Sentiment Analysis of Korn Albums (Sorted)")
+plt.axvline(0, color="black", linestyle="dashed")
+plt.show()
+```
+
+```{python}
+album_order = [
+    "Korn", "Life is Peachy", "Follow The Leader", "Issues", "Untouchables",
+    "Take a Look in the Mirror", "See You On The Other Side", "Untitled",
+    "Remember Who You Are", "The Path of Totality", "The Paradigm shift",
+    "The Serenity of Suffering", "The Nothing", "Requiem"
+]
+
+sentiment_by_album["album"] = pd.Categorical(sentiment_by_album["album"], categories=album_order, ordered=True)
+sentiment_by_album_sorted = sentiment_by_album.sort_values("album")
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(x=sentiment_by_album_sorted["album"], y=sentiment_by_album_sorted["sentiment_score"], marker="o")
+plt.xticks(rotation=45, ha="right")
+plt.xlabel("Album")
+plt.ylabel("Average Sentiment Score")
+plt.title("Sentiment Trend Across Korn Albums")
+plt.axhline(0, color="black", linestyle="dashed") 
+plt.show()
+
+```
+
+```{python}
+import pronouncing
+def count_rhymes(lyrics):
+    words = lyrics.split()
+    rhymes = [pronouncing.rhymes(word) for word in words]
+    return sum([len(r) for r in rhymes])
+
+df["rhyme_count"] = df["lyrics"].apply(count_rhymes)
+
+rhyme_by_album = df.groupby("album")["rhyme_count"].mean().reset_index()
+
+rhyme_by_album = rhyme_by_album.sort_values(by="rhyme_count", ascending=False)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x="rhyme_count", y="album", data=rhyme_by_album, palette="magma")
+plt.xlabel("Average Rhyme Count per Song")
+plt.ylabel("Album")
+plt.title("Rhyme Density Across Korn Albums")
+plt.show()
+
+```
+
+```{python}
+word_to_track = "....."  # Change to any word you want to track
+
+df["word_count"] = df["lyrics"].apply(lambda x: x.lower().split().count(word_to_track))
+word_trend = df.groupby("album")["word_count"].sum().reset_index()
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(x="album", y="word_count", data=word_trend, marker="o")
+plt.xticks(rotation=45)
+plt.xlabel("Album")
+plt.ylabel(f"Occurrences of '{word_to_track}'")
+plt.title(f"Frequency of '{word_to_track}' Across Korn Albums")
+plt.show()
+
+```
+
+```{python}
+import pandas as pd
+from textblob import TextBlob
+
+df.columns = df.columns.str.strip()
+
+if "sentiment_score" not in df.columns:
+    df["sentiment_score"] = df["lyrics"].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
+
+top_positive = df.nlargest(10, "sentiment_score")[["title", "sentiment_score"]]
+top_negative = df.nsmallest(10, "sentiment_score")[["title", "sentiment_score"]]
+
+print(top_positive)
+print(top_negative)
+```
+
+
+```{python}
+import lyricsgenius
+import pandas as pd
+import re
+
+GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
+genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
+
+def get_lyrics(artist_name, max_songs=20):
+    artist = genius.search_artist(artist_name, max_songs=max_songs, sort="popularity")
+    song_data = [{"title": song.title, "lyrics": song.lyrics} for song in artist.songs]
+    return pd.DataFrame(song_data)
+
+bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+band_lyrics = {}
+
+for band in bands:
+    band_lyrics[band] = get_lyrics(band, max_songs=30)
+
+for band, df in band_lyrics.items():
+    df.to_csv(f"{band}_lyrics.csv", index=False)
+
+```
+
+```{python}
+import pandas as pd
+import re
+
+def clean_lyrics(lyrics):
+    if pd.isna(lyrics):  
+        return ""
+    lyrics = lyrics.replace("\n", " ")  
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
+    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  
+    lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+    return lyrics
+
+bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+band_dfs = {}
+
+for band in bands:
+    file_path = f"{band}_lyrics.csv" 
+    df = pd.read_csv(file_path)
+    df["lyrics"] = df["lyrics"].apply(clean_lyrics)
+    band_dfs[band] = df
+
+```
+
+```{python}
+from textblob import TextBlob
+
+def get_sentiment(text):
+    return TextBlob(str(text)).sentiment.polarity
+
+sentiment_scores = {}
+
+for band, df in band_dfs.items():
+    df["sentiment_score"] = df["lyrics"].apply(get_sentiment)
+    sentiment_scores[band] = df["sentiment_score"].mean()  
+
+sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=["Band", "Sentiment Score"])
+
+```
+
+```{python}
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(10, 5))
+sns.barplot(x="Band", y="Sentiment Score", data=sentiment_df, palette="coolwarm")
+plt.xlabel("Band")
+plt.ylabel("Average Sentiment Score")
+plt.title("Comparison of Lyric Sentiment Across Nu-Metal Bands")
+plt.axhline(0, color="black", linestyle="dashed")  
+plt.show()
+
+```
+
