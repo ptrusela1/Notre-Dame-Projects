@@ -100,113 +100,129 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 #import pandas as pd
 #import re
 
+# Set your Genius API access token
 GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
 
+# Initialize the Genius API client using the provided token
 genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
-genius.remove_section_headers = True  
-genius.skip_non_songs = True  
+genius.remove_section_headers = True  # Remove section headers (e.g., [Chorus]) from lyrics
+genius.skip_non_songs = True           # Skip entries that are not actual songs
 
+# Search for the artist "Korn" and sort songs by popularity
 artist = genius.search_artist("Korn", sort="popularity")
 
+# Define a function to clean the lyrics text
 def clean_lyrics(lyrics):
     if lyrics:
-        lyrics = lyrics.replace("\n", " ")  
-        lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-        lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics) 
-        lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+        lyrics = lyrics.replace("\n", " ")            # Replace newline characters with spaces
+        lyrics = re.sub(r"\[.*?\]", "", lyrics)         # Remove any text inside square brackets (often metadata)
+        lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  # Remove text within parentheses or brackets
+        lyrics = re.sub(r"^\s+|\s+$", "", lyrics)        # Remove leading and trailing whitespace
     return lyrics
 
+# Create a list of dictionaries, each containing a song title and its cleaned lyrics
 song_data = [{"title": song.title, "lyrics": clean_lyrics(song.lyrics)} for song in artist.songs]
 
+# Convert the list to a pandas DataFrame
 df = pd.DataFrame(song_data)
 
+# Define the output CSV filename for the cleaned lyrics
 csv_filename = "korn_clean_lyrics.csv"
+
+# Save the DataFrame to a CSV file
 df.to_csv(csv_filename, index=False, encoding='utf-8')
 
-print(f"Clean lyrics saved to {csv_filename}")
-
-</code></pre>
-<pre><code>import pandas as pd
-import re
-
+# Print a message indicating that the file has been saved
+print(f"Clean lyrics saved to {csv_filename}")</code></pre>
+<pre><code>
+# Read the previously saved CSV file containing the cleaned lyrics
 file_path = "korn_clean_lyrics.csv" 
 df = pd.read_csv(file_path)
 
+# Define an additional cleaning function for the lyrics column
 def clean_lyrics(lyrics):
     if pd.isna(lyrics): 
         return ""
-    lyrics = re.sub(r"^\d+\s*", "", lyrics) 
-    lyrics = re.sub(r"\bcontributor[s]?\b", "", lyrics, flags=re.IGNORECASE)  
-    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-    lyrics = re.sub(r"\s+", " ", lyrics).strip()  
+    lyrics = re.sub(r"^\d+\s*", "", lyrics)                      # Remove leading numbers and any whitespace
+    lyrics = re.sub(r"\bcontributor[s]?\b", "", lyrics, flags=re.IGNORECASE)  # Remove the word "contributor(s)"
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)                        # Remove any text within square brackets
+    lyrics = re.sub(r"\s+", " ", lyrics).strip()                   # Replace multiple spaces with a single space and trim
     return lyrics
 
+# Apply the cleaning function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(clean_lyrics)
 
+# Define the output file path for the updated CSV
 cleaned_file_path = "korn_clean_lyrics_updated.csv"
+# Save the updated DataFrame to a new CSV file
 df.to_csv(cleaned_file_path, index=False, encoding="utf-8")
-
-print(f"Cleaned lyrics saved to {cleaned_file_path}")
 </code></pre>
-<pre><code>import pandas as pd
-
+<pre><code>
+# Read the updated CSV file with cleaned lyrics
 file_path = "korn_clean_lyrics_updated.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to filter out songs based on their title
 def filter_songs(title):
     if pd.isna(title):  
         return False
-    title = title.lower()
+    title = title.lower()  # Convert title to lowercase for uniform comparison
+    # Return False if title contains any of the unwanted keywords; otherwise, return True
     return not ("live" in title or "remix" in title or "mix" in title
             or "demo" in title or "clean" in title or "cover" in title
             or "radio" in title or "edit" in title or "acoustic" in title or "show" in title or "mass" in title or "version" in title or "dub" in title or "acapella" in title or "woodstock" in title)
 
-
+# Filter the DataFrame to only include songs that pass the title check
 df_filtered = df[df["title"].apply(filter_songs)].reset_index(drop=True)
 
+# Define the output CSV filename for the filtered data
 filtered_file_path = "korn_clean_lyrics_filtered.csv"
+# Save the filtered DataFrame to CSV
 df_filtered.to_csv(filtered_file_path, index=False, encoding="utf-8")
-
-print(f"Filtered lyrics saved to {filtered_file_path}")
 </code></pre>
-<pre><code>import pandas as pd
-import re
-
+<pre><code># Read the filtered CSV file
 file_path = "korn_clean_lyrics_filtered.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to remove a specific unwanted text pattern from the lyrics
 def clean_lyrics_text(lyrics):
     if pd.isna(lyrics):  
         return ""
+    # Remove text that starts with "Contributors" and ends with "Lyrics"
     return re.sub(r"Contributors.*?Lyrics", "", lyrics, flags=re.IGNORECASE).strip()
 
+# Apply the text cleaning function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(clean_lyrics_text)
 
+# Define the output file name for the final cleaned lyrics
 final_cleaned_file_path = "korn_final_clean_lyrics.csv"
+# Save the DataFrame with cleaned lyrics to CSV
 df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8")
-
-print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
 </code></pre>
-<pre><code>import pandas as pd
-import re
-
+<pre><code># Read the final cleaned CSV file
 file_path = "korn_final_clean_lyrics.csv"  
 df = pd.read_csv(file_path)
 
+# Define a function to remove promotional text from the lyrics
 def remove_promotional_text(lyrics):
     if pd.isna(lyrics):  
         return ""
+    # Remove any text starting with "See Korn Live" and ending with "Embed"
     lyrics = re.sub(r"See Korn Live.*?Embed", "", lyrics, flags=re.IGNORECASE).strip()  
     return lyrics
 
+# Apply the promotional text removal function to the 'lyrics' column
 df["lyrics"] = df["lyrics"].apply(remove_promotional_text)
 
+# Define the output file name with no ads/promotional content
 final_cleaned_file_path = "korn_final_clean_lyrics_no_ads.csv"
+# Save the updated DataFrame to CSV with a specified encoding for better compatibility
 df.to_csv(final_cleaned_file_path, index=False, encoding="utf-8-sig")
 
+# Print a message indicating that the final cleaned lyrics without ads have been saved
 print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
 </code></pre>
-<div id="98f3c1fd" class="cell" data-execution_count="1">
+<div id="50446992" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections <span class="im">import</span> Counter</span>
@@ -215,52 +231,64 @@ print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.feature_extraction.text <span class="im">import</span> CountVectorizer</span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.decomposition <span class="im">import</span> LatentDirichletAllocation</span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the CSV file containing the final cleaned lyrics without ads</span></span>
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(<span class="st">"C:/Users/pauly/OneDrive/Documents/GitHub/Notre-Dame-Projects/Korn LDA Model/korn_final_clean_lyrics_no_ads.csv"</span>)</span>
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_lyrics(lyrics):</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> pd.isna(lyrics):  </span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">""</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    lyrics <span class="op">=</span> re.sub(<span class="vs">r"[^\w\s]"</span>, <span class="st">""</span>, lyrics.lower())  </span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> lyrics</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"processed_lyrics"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(preprocess_lyrics)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a function to preprocess lyrics by lowercasing and removing punctuation</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> preprocess_lyrics(lyrics):</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> pd.isna(lyrics):  </span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">""</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Remove punctuation and convert text to lowercase</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    lyrics <span class="op">=</span> re.sub(<span class="vs">r"[^\w\s]"</span>, <span class="st">""</span>, lyrics.lower())  </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> lyrics</span>
 <span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>all_lyrics <span class="op">=</span> <span class="st">" "</span>.join(df[<span class="st">"processed_lyrics"</span>])</span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>word_counts <span class="op">=</span> Counter(all_lyrics.split())</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>most_common_words <span class="op">=</span> word_counts.most_common(<span class="dv">20</span>)</span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Most Common Words in Korn Lyrics:"</span>)</span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> word, freq <span class="kw">in</span> most_common_words:</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>word<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>freq<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply preprocessing to each song's lyrics</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"processed_lyrics"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(preprocess_lyrics)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine all processed lyrics into one large string for analysis</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>all_lyrics <span class="op">=</span> <span class="st">" "</span>.join(df[<span class="st">"processed_lyrics"</span>])</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Count the frequency of each word in the lyrics</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>word_counts <span class="op">=</span> Counter(all_lyrics.split())</span>
 <span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>wordcloud <span class="op">=</span> WordCloud(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">400</span>, background_color<span class="op">=</span><span class="st">"black"</span>).generate(all_lyrics)</span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">5</span>))</span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>plt.imshow(wordcloud, interpolation<span class="op">=</span><span class="st">"bilinear"</span>)</span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">"off"</span>)</span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Word Cloud of Korn Lyrics"</span>)</span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>vectorizer <span class="op">=</span> CountVectorizer(stop_words<span class="op">=</span><span class="st">"english"</span>, max_features<span class="op">=</span><span class="dv">500</span>)</span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> vectorizer.fit_transform(df[<span class="st">"processed_lyrics"</span>])</span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>num_topics <span class="op">=</span> <span class="dv">5</span></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>lda_model <span class="op">=</span> LatentDirichletAllocation(n_components<span class="op">=</span>num_topics, random_state<span class="op">=</span><span class="dv">42</span>)</span>
-<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>lda_model.fit(X)</span>
-<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>words <span class="op">=</span> vectorizer.get_feature_names_out()</span>
-<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>topics <span class="op">=</span> {}</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the 20 most common words and print them</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>most_common_words <span class="op">=</span> word_counts.most_common(<span class="dv">20</span>)</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Most Common Words in Korn Lyrics:"</span>)</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> word, freq <span class="kw">in</span> most_common_words:</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>word<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>freq<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate a word cloud visualization using the combined lyrics text</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>wordcloud <span class="op">=</span> WordCloud(width<span class="op">=</span><span class="dv">800</span>, height<span class="op">=</span><span class="dv">400</span>, background_color<span class="op">=</span><span class="st">"black"</span>).generate(all_lyrics)</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">5</span>))</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>plt.imshow(wordcloud, interpolation<span class="op">=</span><span class="st">"bilinear"</span>)</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">"off"</span>)</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Word Cloud of Korn Lyrics"</span>)</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert the processed lyrics into a document-term matrix with a maximum of 500 features, ignoring English stop words</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>vectorizer <span class="op">=</span> CountVectorizer(stop_words<span class="op">=</span><span class="st">"english"</span>, max_features<span class="op">=</span><span class="dv">500</span>)</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> vectorizer.fit_transform(df[<span class="st">"processed_lyrics"</span>])</span>
 <span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">LDA Topics in Korn Lyrics:"</span>)</span>
-<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> topic_idx, topic <span class="kw">in</span> <span class="bu">enumerate</span>(lda_model.components_):</span>
-<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>    top_words <span class="op">=</span> [words[i] <span class="cf">for</span> i <span class="kw">in</span> topic.argsort()[<span class="op">-</span><span class="dv">10</span>:]]  </span>
-<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>    topics[<span class="ss">f"Topic </span><span class="sc">{</span>topic_idx<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span>] <span class="op">=</span> top_words</span>
-<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Topic </span><span class="sc">{</span>topic_idx<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">: </span><span class="sc">{</span><span class="st">', '</span><span class="sc">.</span>join(top_words)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>topics_df <span class="op">=</span> pd.DataFrame(topics)</span>
-<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">LDA Topics DataFrame:</span><span class="ch">\n</span><span class="st">"</span>, topics_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the number of topics for LDA (Latent Dirichlet Allocation)</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>num_topics <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>lda_model <span class="op">=</span> LatentDirichletAllocation(n_components<span class="op">=</span>num_topics, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>lda_model.fit(X)</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract the feature names (words) from the vectorizer</span></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>words <span class="op">=</span> vectorizer.get_feature_names_out()</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>topics <span class="op">=</span> {}</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">LDA Topics in Korn Lyrics:"</span>)</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a><span class="co"># Iterate over each topic produced by the LDA model</span></span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> topic_idx, topic <span class="kw">in</span> <span class="bu">enumerate</span>(lda_model.components_):</span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the top 10 words for each topic by selecting those with the highest weight</span></span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>    top_words <span class="op">=</span> [words[i] <span class="cf">for</span> i <span class="kw">in</span> topic.argsort()[<span class="op">-</span><span class="dv">10</span>:]]  </span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>    topics[<span class="ss">f"Topic </span><span class="sc">{</span>topic_idx<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span>] <span class="op">=</span> top_words</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Topic </span><span class="sc">{</span>topic_idx<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">: </span><span class="sc">{</span><span class="st">', '</span><span class="sc">.</span>join(top_words)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert the topics dictionary to a DataFrame for easier viewing</span></span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>topics_df <span class="op">=</span> pd.DataFrame(topics)</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">LDA Topics DataFrame:</span><span class="ch">\n</span><span class="st">"</span>, topics_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 Most Common Words in Korn Lyrics:
@@ -315,33 +343,40 @@ LDA Topics DataFrame:
 9    fuck    time  harder       im      im</code></pre>
 </div>
 </div>
-<div id="56b07477" class="cell" data-execution_count="2">
+<div id="4b096f32" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> textblob <span class="im">import</span> TextBlob</span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>df.columns <span class="op">=</span> df.columns.<span class="bu">str</span>.strip()</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">'album'</span> <span class="kw">in</span> df.columns:</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_sentiment(text):</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> TextBlob(<span class="bu">str</span>(text)).sentiment.polarity</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"sentiment_score"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(get_sentiment)</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    sentiment_by_album <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"sentiment_score"</span>].mean().reset_index()</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    sns.barplot(x<span class="op">=</span><span class="st">"sentiment_score"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>sentiment_by_album, palette<span class="op">=</span><span class="st">"coolwarm"</span>)</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    plt.xlabel(<span class="st">"Average Sentiment Score"</span>)</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    plt.ylabel(<span class="st">"Album"</span>)</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    plt.title(<span class="st">"Sentiment Analysis of Korn Albums"</span>)</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    plt.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>)  </span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"The dataset does not contain an 'album' column. Sentiment analysis by album requires album information."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove any extra spaces from column names</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>df.columns <span class="op">=</span> df.columns.<span class="bu">str</span>.strip()</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Check if there is an 'album' column in the dataset</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">'album'</span> <span class="kw">in</span> df.columns:</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Define a function to calculate the sentiment polarity of a given text using TextBlob</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> get_sentiment(text):</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> TextBlob(<span class="bu">str</span>(text)).sentiment.polarity</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Apply sentiment analysis to the lyrics column and store the result in a new column</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"sentiment_score"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(get_sentiment)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate the average sentiment score per album</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    sentiment_by_album <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"sentiment_score"</span>].mean().reset_index()</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create a bar plot to visualize average sentiment scores for each album</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    sns.barplot(x<span class="op">=</span><span class="st">"sentiment_score"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>sentiment_by_album, palette<span class="op">=</span><span class="st">"coolwarm"</span>)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    plt.xlabel(<span class="st">"Average Sentiment Score"</span>)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    plt.ylabel(<span class="st">"Album"</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    plt.title(<span class="st">"Sentiment Analysis of Korn Albums"</span>)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    plt.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>)  <span class="co"># Add a vertical line at 0 for reference</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If there is no album column, print a message indicating that sentiment analysis by album cannot be performed</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"The dataset does not contain an 'album' column. Sentiment analysis by album requires album information."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_16536\84569236.py:17: FutureWarning:
+<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_27916\687515948.py:23: FutureWarning:
 
 
 
@@ -357,18 +392,20 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 </div>
 </div>
-<div id="8185cf87" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sentiment_by_album_sorted <span class="op">=</span> sentiment_by_album.sort_values(by<span class="op">=</span><span class="st">"sentiment_score"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">"sentiment_score"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>sentiment_by_album_sorted, palette<span class="op">=</span><span class="st">"coolwarm"</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Average Sentiment Score"</span>)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Album"</span>)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Sentiment Analysis of Korn Albums (Sorted)"</span>)</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>plt.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4be60b7d" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sort the albums by their average sentiment score in descending order</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sentiment_by_album_sorted <span class="op">=</span> sentiment_by_album.sort_values(by<span class="op">=</span><span class="st">"sentiment_score"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a bar plot using the sorted sentiment data</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">"sentiment_score"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>sentiment_by_album_sorted, palette<span class="op">=</span><span class="st">"coolwarm"</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Average Sentiment Score"</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Album"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Sentiment Analysis of Korn Albums (Sorted)"</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>plt.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_16536\3672540773.py:4: FutureWarning:
+<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_27916\1975531651.py:6: FutureWarning:
 
 
 
@@ -384,25 +421,29 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 </div>
 </div>
-<div id="3a926331" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>album_order <span class="op">=</span> [</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Korn"</span>, <span class="st">"Life is Peachy"</span>, <span class="st">"Follow The Leader"</span>, <span class="st">"Issues"</span>, <span class="st">"Untouchables"</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Take a Look in the Mirror"</span>, <span class="st">"See You On The Other Side"</span>, <span class="st">"Untitled"</span>,</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Remember Who You Are"</span>, <span class="st">"The Path of Totality"</span>, <span class="st">"The Paradigm shift"</span>,</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"The Serenity of Suffering"</span>, <span class="st">"The Nothing"</span>, <span class="st">"Requiem"</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>sentiment_by_album[<span class="st">"album"</span>] <span class="op">=</span> pd.Categorical(sentiment_by_album[<span class="st">"album"</span>], categories<span class="op">=</span>album_order, ordered<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>sentiment_by_album_sorted <span class="op">=</span> sentiment_by_album.sort_values(<span class="st">"album"</span>)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>sns.lineplot(x<span class="op">=</span>sentiment_by_album_sorted[<span class="st">"album"</span>], y<span class="op">=</span>sentiment_by_album_sorted[<span class="st">"sentiment_score"</span>], marker<span class="op">=</span><span class="st">"o"</span>)</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>plt.xticks(rotation<span class="op">=</span><span class="dv">45</span>, ha<span class="op">=</span><span class="st">"right"</span>)</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Album"</span>)</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Average Sentiment Score"</span>)</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Sentiment Trend Across Korn Albums"</span>)</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>plt.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>) </span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="64e8ce89" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the desired order of albums for visualization</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>album_order <span class="op">=</span> [</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Korn"</span>, <span class="st">"Life is Peachy"</span>, <span class="st">"Follow The Leader"</span>, <span class="st">"Issues"</span>, <span class="st">"Untouchables"</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Take a Look in the Mirror"</span>, <span class="st">"See You On The Other Side"</span>, <span class="st">"Untitled"</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Remember Who You Are"</span>, <span class="st">"The Path of Totality"</span>, <span class="st">"The Paradigm shift"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"The Serenity of Suffering"</span>, <span class="st">"The Nothing"</span>, <span class="st">"Requiem"</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert the 'album' column to a categorical type with a specific order</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>sentiment_by_album[<span class="st">"album"</span>] <span class="op">=</span> pd.Categorical(sentiment_by_album[<span class="st">"album"</span>], categories<span class="op">=</span>album_order, ordered<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Sort the DataFrame based on the defined album order</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>sentiment_by_album_sorted <span class="op">=</span> sentiment_by_album.sort_values(<span class="st">"album"</span>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a line plot to visualize the trend of sentiment scores across albums</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>sns.lineplot(x<span class="op">=</span>sentiment_by_album_sorted[<span class="st">"album"</span>], y<span class="op">=</span>sentiment_by_album_sorted[<span class="st">"sentiment_score"</span>], marker<span class="op">=</span><span class="st">"o"</span>)</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>plt.xticks(rotation<span class="op">=</span><span class="dv">45</span>, ha<span class="op">=</span><span class="st">"right"</span>)  <span class="co"># Rotate album labels for better readability</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Album"</span>)</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Average Sentiment Score"</span>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Sentiment Trend Across Korn Albums"</span>)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>plt.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"dashed"</span>)  <span class="co"># Add a horizontal line at 0</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -411,27 +452,33 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 </div>
 </div>
-<div id="2ead2dfa" class="cell" data-execution_count="5">
+<div id="2b2d2357" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pronouncing</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> count_rhymes(lyrics):</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    words <span class="op">=</span> lyrics.split()</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    rhymes <span class="op">=</span> [pronouncing.rhymes(word) <span class="cf">for</span> word <span class="kw">in</span> words]</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>([<span class="bu">len</span>(r) <span class="cf">for</span> r <span class="kw">in</span> rhymes])</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"rhyme_count"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(count_rhymes)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define a function to count the number of rhymes in the lyrics using the pronouncing library</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> count_rhymes(lyrics):</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    words <span class="op">=</span> lyrics.split()  <span class="co"># Split the lyrics into individual words</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    rhymes <span class="op">=</span> [pronouncing.rhymes(word) <span class="cf">for</span> word <span class="kw">in</span> words]  <span class="co"># Get a list of rhyming words for each word</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>([<span class="bu">len</span>(r) <span class="cf">for</span> r <span class="kw">in</span> rhymes])  <span class="co"># Sum up the total number of rhymes found</span></span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>rhyme_by_album <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"rhyme_count"</span>].mean().reset_index()</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>rhyme_by_album <span class="op">=</span> rhyme_by_album.sort_values(by<span class="op">=</span><span class="st">"rhyme_count"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">"rhyme_count"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>rhyme_by_album, palette<span class="op">=</span><span class="st">"magma"</span>)</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Average Rhyme Count per Song"</span>)</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Album"</span>)</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Rhyme Density Across Korn Albums"</span>)</span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the rhyme counting function to each song's lyrics and store the result in a new column</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"rhyme_count"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(count_rhymes)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the average rhyme count per album</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>rhyme_by_album <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"rhyme_count"</span>].mean().reset_index()</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Sort the albums by average rhyme count in descending order</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>rhyme_by_album <span class="op">=</span> rhyme_by_album.sort_values(by<span class="op">=</span><span class="st">"rhyme_count"</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a bar plot to visualize the average rhyme density per album</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>sns.barplot(x<span class="op">=</span><span class="st">"rhyme_count"</span>, y<span class="op">=</span><span class="st">"album"</span>, data<span class="op">=</span>rhyme_by_album, palette<span class="op">=</span><span class="st">"magma"</span>)</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Average Rhyme Count per Song"</span>)</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Album"</span>)</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Rhyme Density Across Korn Albums"</span>)</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_16536\2015928751.py:14: FutureWarning:
+<pre><code>C:\Users\pauly\AppData\Local\Temp\ipykernel_27916\2075978852.py:20: FutureWarning:
 
 
 
@@ -447,19 +494,23 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 </div>
 </div>
-<div id="582759fd" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>word_to_track <span class="op">=</span> <span class="st">"....."</span>  <span class="co"># Change to any word you want to track</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"word_count"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.lower().split().count(word_to_track))</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>word_trend <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"word_count"</span>].<span class="bu">sum</span>().reset_index()</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>sns.lineplot(x<span class="op">=</span><span class="st">"album"</span>, y<span class="op">=</span><span class="st">"word_count"</span>, data<span class="op">=</span>word_trend, marker<span class="op">=</span><span class="st">"o"</span>)</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>plt.xticks(rotation<span class="op">=</span><span class="dv">45</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Album"</span>)</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="ss">f"Occurrences of '</span><span class="sc">{</span>word_to_track<span class="sc">}</span><span class="ss">'"</span>)</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="ss">f"Frequency of '</span><span class="sc">{</span>word_to_track<span class="sc">}</span><span class="ss">' Across Korn Albums"</span>)</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="0ac4bfaf" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the word you want to track in the lyrics; replace "....." with the actual word</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>word_to_track <span class="op">=</span> <span class="st">"....."</span>  <span class="co"># Change to any word you want to track</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Count the occurrences of the specified word in each song's lyrics (case-insensitive)</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"word_count"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: x.lower().split().count(word_to_track))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Sum the word counts for each album</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>word_trend <span class="op">=</span> df.groupby(<span class="st">"album"</span>)[<span class="st">"word_count"</span>].<span class="bu">sum</span>().reset_index()</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a line plot to show how the frequency of the tracked word changes across albums</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>sns.lineplot(x<span class="op">=</span><span class="st">"album"</span>, y<span class="op">=</span><span class="st">"word_count"</span>, data<span class="op">=</span>word_trend, marker<span class="op">=</span><span class="st">"o"</span>)</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>plt.xticks(rotation<span class="op">=</span><span class="dv">45</span>)  <span class="co"># Rotate album labels for better readability</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Album"</span>)</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="ss">f"Occurrences of '</span><span class="sc">{</span>word_to_track<span class="sc">}</span><span class="ss">'"</span>)</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="ss">f"Frequency of '</span><span class="sc">{</span>word_to_track<span class="sc">}</span><span class="ss">' Across Korn Albums"</span>)</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -468,20 +519,25 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 </div>
 </div>
-<div id="3b3a884f" class="cell" data-execution_count="7">
+<div id="fa903827" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> textblob <span class="im">import</span> TextBlob</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>df.columns <span class="op">=</span> df.columns.<span class="bu">str</span>.strip()</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">"sentiment_score"</span> <span class="kw">not</span> <span class="kw">in</span> df.columns:</span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"sentiment_score"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: TextBlob(<span class="bu">str</span>(x)).sentiment.polarity)</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>top_positive <span class="op">=</span> df.nlargest(<span class="dv">10</span>, <span class="st">"sentiment_score"</span>)[[<span class="st">"title"</span>, <span class="st">"sentiment_score"</span>]]</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>top_negative <span class="op">=</span> df.nsmallest(<span class="dv">10</span>, <span class="st">"sentiment_score"</span>)[[<span class="st">"title"</span>, <span class="st">"sentiment_score"</span>]]</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(top_positive)</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(top_negative)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove any extra spaces from the DataFrame's column names</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>df.columns <span class="op">=</span> df.columns.<span class="bu">str</span>.strip()</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># If the "sentiment_score" column doesn't exist, create it by computing sentiment polarity for each song's lyrics</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">"sentiment_score"</span> <span class="kw">not</span> <span class="kw">in</span> df.columns:</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    df[<span class="st">"sentiment_score"</span>] <span class="op">=</span> df[<span class="st">"lyrics"</span>].<span class="bu">apply</span>(<span class="kw">lambda</span> x: TextBlob(<span class="bu">str</span>(x)).sentiment.polarity)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the top 10 songs with the highest sentiment scores (most positive)</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>top_positive <span class="op">=</span> df.nlargest(<span class="dv">10</span>, <span class="st">"sentiment_score"</span>)[[<span class="st">"title"</span>, <span class="st">"sentiment_score"</span>]]</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the top 10 songs with the lowest sentiment scores (most negative)</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>top_negative <span class="op">=</span> df.nsmallest(<span class="dv">10</span>, <span class="st">"sentiment_score"</span>)[[<span class="st">"title"</span>, <span class="st">"sentiment_score"</span>]]</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Print out the results for positive and negative sentiment songs</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(top_positive)</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(top_negative)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                    title  sentiment_score
 72                   Dead         0.529167
@@ -507,71 +563,84 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 63                           Fake        -0.387897</code></pre>
 </div>
 </div>
-<pre><code>import lyricsgenius
-import pandas as pd
-import re
-
+<pre><code># Set your Genius API access token
 GENIUS_ACCESS_TOKEN = "j0a5S76HQ2OmujVXG19QFXzV_eg4leYIMvuJq4NqUKHWRiOhDHZiGx4ggcU_5its"
+# Initialize the Genius API client
 genius = lyricsgenius.Genius(GENIUS_ACCESS_TOKEN)
 
+# Define a function to retrieve lyrics for a given artist
 def get_lyrics(artist_name, max_songs=20):
+    # Search for the artist and retrieve up to 'max_songs' sorted by popularity
     artist = genius.search_artist(artist_name, max_songs=max_songs, sort="popularity")
+    # Create a list of dictionaries containing each song's title and lyrics
     song_data = [{"title": song.title, "lyrics": song.lyrics} for song in artist.songs]
+    # Return the data as a pandas DataFrame
     return pd.DataFrame(song_data)
 
+# List of bands to retrieve lyrics for
 bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+# Dictionary to store each band's DataFrame of lyrics
 band_lyrics = {}
 
+# Loop through each band, retrieve their lyrics, and store the DataFrame in the dictionary
 for band in bands:
     band_lyrics[band] = get_lyrics(band, max_songs=30)
 
+# Save each band's lyrics DataFrame to a CSV file
 for band, df in band_lyrics.items():
     df.to_csv(f"{band}_lyrics.csv", index=False)
 </code></pre>
-<pre><code>import pandas as pd
-import re
-
+<pre><code># Define a function to clean up the lyrics text
 def clean_lyrics(lyrics):
     if pd.isna(lyrics):  
         return ""
-    lyrics = lyrics.replace("\n", " ")  
-    lyrics = re.sub(r"\[.*?\]", "", lyrics)  
-    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  
-    lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  
+    lyrics = lyrics.replace("\n", " ")  # Replace newline characters with spaces
+    lyrics = re.sub(r"\[.*?\]", "", lyrics)  # Remove any text within square brackets
+    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)  # Remove text within parentheses or brackets
+    lyrics = re.sub(r"^\s+|\s+$", "", lyrics)  # Trim leading and trailing whitespace
     return lyrics
 
+# List of bands for which CSV files have been saved earlier
 bands = ["Korn", "Slipknot", "Linkin Park", "Limp Bizkit", "Deftones"]
+# Dictionary to hold DataFrames after cleaning the lyrics
 band_dfs = {}
 
+# Loop through each band and process its CSV file
 for band in bands:
-    file_path = f"{band}_lyrics.csv" 
-    df = pd.read_csv(file_path)
-    df["lyrics"] = df["lyrics"].apply(clean_lyrics)
-    band_dfs[band] = df
+    file_path = f"{band}_lyrics.csv"  # Construct the file path
+    df = pd.read_csv(file_path)  # Read the CSV into a DataFrame
+    df["lyrics"] = df["lyrics"].apply(clean_lyrics)  # Apply the cleaning function to the lyrics column
+    band_dfs[band] = df  # Store the cleaned DataFrame in the dictionary
 </code></pre>
 <pre><code>from textblob import TextBlob
 
+# Define a function to compute the sentiment polarity of a text
 def get_sentiment(text):
     return TextBlob(str(text)).sentiment.polarity
 
+# Dictionary to store the average sentiment score for each band
 sentiment_scores = {}
 
+# Loop through each band's DataFrame, compute sentiment for each song, and get the mean sentiment
 for band, df in band_dfs.items():
     df["sentiment_score"] = df["lyrics"].apply(get_sentiment)
-    sentiment_scores[band] = df["sentiment_score"].mean()  
+    sentiment_scores[band] = df["sentiment_score"].mean()  # Calculate the average sentiment score for the band
 
+# Convert the sentiment scores dictionary into a DataFrame for further analysis/visualization
 sentiment_df = pd.DataFrame(sentiment_scores.items(), columns=["Band", "Sentiment Score"])
 </code></pre>
 <pre><code>import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Set up the figure size for the plot
 plt.figure(figsize=(10, 5))
+# Create a bar plot to compare the average sentiment score of lyrics across bands
 sns.barplot(x="Band", y="Sentiment Score", data=sentiment_df, palette="coolwarm")
-plt.xlabel("Band")
-plt.ylabel("Average Sentiment Score")
-plt.title("Comparison of Lyric Sentiment Across Nu-Metal Bands")
-plt.axhline(0, color="black", linestyle="dashed")  
-plt.show()
+plt.xlabel("Band")  # Label for the x-axis
+plt.ylabel("Average Sentiment Score")  # Label for the y-axis
+plt.title("Comparison of Lyric Sentiment Across Nu-Metal Bands")  # Title of the plot
+plt.axhline(0, color="black", linestyle="dashed")  # Draw a dashed horizontal line at 0 for reference
+plt.show()  # Display the plot
 </code></pre>
 
 </main>
