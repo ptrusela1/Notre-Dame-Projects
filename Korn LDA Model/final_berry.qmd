@@ -38,7 +38,7 @@ print(f"Clean lyrics saved to {csv_filename}")
 
 ```
 
-```{python}
+```
 import pandas as pd
 import re
 
@@ -63,7 +63,7 @@ print(f"Cleaned lyrics saved to {cleaned_file_path}")
 
 ```
 
-```{python}
+```
 import pandas as pd
 
 file_path = "korn_clean_lyrics_updated.csv"  
@@ -87,7 +87,7 @@ print(f"Filtered lyrics saved to {filtered_file_path}")
 
 ```
 
-```{python}
+```
 import pandas as pd
 import re
 
@@ -108,7 +108,7 @@ print(f"Final cleaned lyrics saved to {final_cleaned_file_path}")
 
 ```
 
-```{python}
+```
 import pandas as pd
 import re
 
